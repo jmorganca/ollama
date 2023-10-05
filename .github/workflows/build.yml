@@ -1,0 +1,40 @@
+on: [push, pull_request]
+name: Build
+jobs:
+  test:
+    strategy:
+      matrix:
+        go-version: [1.20.x, 1.21.x]
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+
+    - name: Install CMake
+      run: |
+        if [ "${{ runner.os }}" == "Linux" ]; then
+          sudo apt update && sudo apt install -y cmake
+        elif [ "${{ runner.os }}" == "macOS" ]; then
+          brew install cmake
+        fi
+
+    - name: Install Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ matrix.go-version }}
+
+    - name: Checkout the source code
+      uses: actions/checkout@v3
+
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-${{ matrix.go-version }}-
+
+    - name: Build
+      run: go generate ./... && go build .
+
+    - name: Test
+      run: go test
