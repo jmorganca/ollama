@@ -68,6 +68,7 @@ func (m *Model) Prompt(request api.GenerateRequest, embedding string) (string, e
 		System string
 		Prompt string
 		Embed  string
+		Args   map[string]any
 
 		// deprecated: versions <= 0.0.7 used this to omit the system prompt
 		Context []int
@@ -77,6 +78,7 @@ func (m *Model) Prompt(request api.GenerateRequest, embedding string) (string, e
 	vars.System = m.System
 	vars.Prompt = request.Prompt
 	vars.Context = request.Context
+	vars.Args = request.Args
 	vars.Embed = embedding
 
 	if request.System != "" {
