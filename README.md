@@ -185,19 +185,50 @@ ollama list
 
 ## Building
 
+### Generic (CPU)
+
 Install `cmake` and `go`:
 
 ```
 brew install cmake go
 ```
 
-Then generate dependencies and build:
-
+Then generate dependencies:
 ```
 go generate ./...
+```
+Then build the binary:
+```
 go build .
 ```
 
+### CUDA (NVIDIA)
+*Your operating system distribution may already have packages for NVIDIA CUDA. Distro packages are often preferable, but instructions are distro-specific. Please consult distro-specific docs for dependencies if available!*
+
+Install `cmake` and `golang` as well as [NVIDIA CUDA](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html) development and runtime packages.
+Then generate dependencies:
+```
+go generate -tags cuda ./...
+```
+Then build the binary:
+```
+go build -tags cuda .
+```
+
+### ROCm (AMD)
+*Your operating system distribution may already have packages for AMD ROCm and CLBlast. Distro packages are often preferable, but instructions are distro-specific. Please consult distro-specific docs for dependencies if available!*
+
+Install [CLBlast](https://github.com/CNugteren/CLBlast/blob/master/doc/installation.md) and [ROCm](https://rocm.docs.amd.com/en/latest/deploy/linux/quick_start.html) developement packages first, as well as `cmake` and `golang`.
+Adjust the paths below (correct for Arch) as appropriate for your distributions install locations and generate dependencies:
+```
+CLBlast_DIR=/usr/lib/cmake/CLBlast ROCM_PATH=/opt/rocm go generate -tags rocm ./...
+```
+Then build the binary:
+```
+go build -tags rocm
+```
+
+### Running local builds
 Next, start the server:
 
 ```

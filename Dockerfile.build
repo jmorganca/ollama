@@ -27,5 +27,5 @@ ENV GOOS=linux
 ENV GOARCH=$TARGETARCH
 ENV GOFLAGS=$GOFLAGS
 
-RUN /usr/local/go/bin/go generate ./... && \
-    /usr/local/go/bin/go build .
+RUN /usr/local/go/bin/go generate -tags cuda ./... && \
+    /usr/local/go/bin/go build -tags cuda .
