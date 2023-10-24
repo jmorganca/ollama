@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/gin-gonic/gin v1.9.1
+	github.com/grandcat/zeroconf v1.0.0
 	github.com/mattn/go-runewidth v0.0.14
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db
 	github.com/olekukonko/tablewriter v0.0.5
@@ -13,7 +14,11 @@ require (
 	golang.org/x/sync v0.3.0
 )
 
-require github.com/rivo/uniseg v0.2.0 // indirect
+require (
+	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
+	github.com/miekg/dns v1.1.27 // indirect
+	github.com/rivo/uniseg v0.2.0 // indirect
+)
 
 require (
 	github.com/bytedance/sonic v1.9.1 // indirect

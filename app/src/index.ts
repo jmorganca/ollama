@@ -86,6 +86,7 @@ function firstRunWindow() {
 
 let tray: Tray | null = null
 let updateAvailable = false
+const discoveryEnabled = process.env.OLLAMA_DISCOVERY === 'ENABLED'
 const assetPath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '..', '..', 'assets')
 
 function trayIconPath() {
@@ -114,8 +115,22 @@ function updateTray() {
     { type: 'separator' },
   ]
 
+  const discoveryItems: MenuItemConstructorOptions[] = []
+
+  if (discoveryEnabled) {
+    discoveryItems.push({
+      label: `Network Service: OllamaProvider`,
+      enabled: false,
+    })
+
+    discoveryItems.push({
+      type: 'separator',
+    })
+  }
+
   const menu = Menu.buildFromTemplate([
     ...(updateAvailable ? updateItems : []),
+    ...(discoveryEnabled ? discoveryItems : []),
     { role: 'quit', label: 'Quit Ollama', accelerator: 'Command+Q' },
   ])
 

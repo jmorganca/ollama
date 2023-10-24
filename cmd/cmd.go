@@ -16,11 +16,13 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/dustin/go-humanize"
+	"github.com/grandcat/zeroconf"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pdevine/readline"
 	"github.com/spf13/cobra"
@@ -783,6 +785,39 @@ func RunServer(cmd *cobra.Command, _ []string) error {
 
 	if err := initializeKeypair(); err != nil {
 		return err
+	}
+
+	if d := os.Getenv("OLLAMA_DISCOVERY"); d == "ENABLED" {
+		if host != "0.0.0.0" {
+			host = "0.0.0.0"
+		}
+
+		var (
+			serviceName string = "OllamaProvider"
+			serviceType string= "_workstation._tcp"
+			serviceDomain string = "local."
+		)
+
+		portNumber, err := strconv.Atoi(port)
+
+		if err != nil {
+			return err
+		}
+
+		_, err = zeroconf.Register(
+			serviceName,
+			serviceType,
+			serviceDomain,
+			portNumber,
+			[]string{"version="+version.Version},
+			nil,
+		)
+
+		if err != nil {
+			return err
+		} else {
+			log.Printf("Network Discovery enabled...")
+		}
 	}
 
 	ln, err := net.Listen("tcp", net.JoinHostPort(host, port))
