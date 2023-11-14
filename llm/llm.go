@@ -18,7 +18,6 @@ type LLM interface {
 	Embedding(context.Context, string) ([]float64, error)
 	Encode(context.Context, string) ([]int, error)
 	Decode(context.Context, []int) (string, error)
-	SetOptions(api.Options)
 	Close()
 	Ping(context.Context) error
 }
@@ -79,5 +78,5 @@ func New(workDir, model string, adapters, projectors []string, opts api.Options)
 	opts.NumGQA = 0
 	opts.RopeFrequencyBase = 0.0
 	opts.RopeFrequencyScale = 0.0
-	return newLlama(model, adapters, projectors, chooseRunners(workDir), ggml.NumLayers(), opts)
+	return newLlamaExtServer(model, adapters, projectors, ggml.NumLayers(), opts)
 }

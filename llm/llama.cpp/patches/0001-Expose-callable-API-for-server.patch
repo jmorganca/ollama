@@ -1,0 +1,422 @@
+From 64b3fbb150d12b3ca63ac2fb4e57bc46f41d2ccd Mon Sep 17 00:00:00 2001
+From: Daniel Hiltgen <daniel@ollama.com>
+Date: Mon, 13 Nov 2023 12:25:58 -0800
+Subject: [PATCH] Expose callable API for server
+
+This adds an extern "C" interface within the example server
+---
+ examples/server/CMakeLists.txt |  24 ++++
+ examples/server/server.cpp     | 247 +++++++++++++++++++++++++++++++++
+ examples/server/server.h       |  83 +++++++++++
+ ggml-cuda.cu                   |   1 +
+ 4 files changed, 355 insertions(+)
+ create mode 100644 examples/server/server.h
+
+diff --git a/examples/server/CMakeLists.txt b/examples/server/CMakeLists.txt
+index 859cd12..4ea47a7 100644
+--- a/examples/server/CMakeLists.txt
++++ b/examples/server/CMakeLists.txt
+@@ -11,3 +11,27 @@ if (WIN32)
+     TARGET_LINK_LIBRARIES(${TARGET} PRIVATE ws2_32)
+ endif()
+ target_compile_features(${TARGET} PRIVATE cxx_std_11)
++
++set(TARGET ext_server)
++option(LLAMA_SERVER_VERBOSE "Build verbose logging option for Server" ON)
++add_library(${TARGET} STATIC server.cpp)
++target_include_directories(${TARGET} PRIVATE ../../common)
++target_include_directories(${TARGET} PRIVATE ../..)
++target_compile_features(${TARGET} PRIVATE cxx_std_11)
++target_compile_definitions(${TARGET} PUBLIC LLAMA_SERVER_LIBRARY=1)
++target_link_libraries(${TARGET} PRIVATE common llama llava ${CMAKE_THREAD_LIBS_INIT})
++
++if (BUILD_SHARED_LIBS)
++    set_target_properties(ext_server PROPERTIES POSITION_INDEPENDENT_CODE ON)
++    target_compile_definitions(ext_server PRIVATE LLAMA_SHARED LLAMA_BUILD)
++    add_library(ext_server_shared SHARED $<TARGET_OBJECTS:ext_server>)
++    target_link_libraries(ext_server_shared PRIVATE ggml llama llava common ${CMAKE_THREAD_LIBS_INIT})
++    install(TARGETS ext_server_shared LIBRARY)
++endif()
++
++if (CUDAToolkit_FOUND)
++    target_include_directories(${TARGET} PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
++    if (WIN32)
++        target_link_libraries(ext_server_shared PRIVATE nvml)
++    endif()
++endif()
+\ No newline at end of file
+diff --git a/examples/server/server.cpp b/examples/server/server.cpp
+index 895f751..f939590 100644
+--- a/examples/server/server.cpp
++++ b/examples/server/server.cpp
+@@ -5,6 +5,9 @@
+ #include "../llava/clip.h"
+ 
+ #include "stb_image.h"
++#if defined(LLAMA_SERVER_LIBRARY)
++#include "server.h"
++#endif
+ 
+ #ifndef NDEBUG
+ // crash the server in debug mode, otherwise send an http 500 error
+@@ -2631,6 +2634,7 @@ static void append_to_generated_text_from_generated_token_probs(llama_server_con
+     }
+ }
+ 
++#ifndef LLAMA_SERVER_LIBRARY
+ int main(int argc, char **argv)
+ {
+     // own arguments required by this example
+@@ -3065,3 +3069,246 @@ int main(int argc, char **argv)
+     llama_backend_free();
+     return 0;
+ }
++
++#else // LLAMA_SERVER_LIBRARY
++// Expose the llama server as a callable extern "C" API
++llama_server_context llama;
++std::atomic<bool> ext_server_running(false);
++std::thread ext_server_thread;
++inline ext_server_err makeErr(uint32_t code, std::string msg) {
++    if (code == 0) {
++        return ext_server_err{0, NULL};
++    }
++    const std::string::size_type size = msg.size();
++    ext_server_err ret = {
++        code,
++        new char[size + 1],
++    };
++    memcpy(ret.err, msg.c_str(), size + 1);
++    return ret;
++}
++
++ext_server_err llama_server_init(ext_server_params *sparams)
++{
++    log_set_target(stdout);
++    gpt_params params;
++    params.n_ctx = sparams->n_ctx;
++    params.n_batch = sparams->n_batch;
++    params.n_threads = sparams->n_threads;
++    params.n_parallel = sparams->n_parallel;
++    params.rope_freq_base = sparams->rope_freq_base;
++    params.rope_freq_scale = sparams->rope_freq_scale;
++
++    if (sparams->memory_f16)  {
++        params.cache_type_k = "f16";
++        params.cache_type_v = "f16";
++    } else {
++        params.cache_type_k = "f32";
++        params.cache_type_v = "f32";
++    }
++    
++    params.n_gpu_layers = sparams->n_gpu_layers;
++    params.main_gpu = sparams->main_gpu;
++    params.use_mlock = sparams->use_mlock;
++    params.use_mmap = sparams->use_mmap;
++    params.numa = sparams->numa;
++    params.embedding = sparams->embedding;
++    if (sparams->model != NULL) {
++        params.model = sparams->model;
++    }
++
++    for (ext_server_lora_adapter *la = sparams->lora_adapters; la != NULL; la = la->next) {
++        params.lora_adapter.push_back(std::make_tuple(la->adapter, la->scale));
++    }
++    
++    try {
++        llama_backend_init(params.numa);
++
++        // load the model
++        if (!llama.load_model(params))
++        {
++            // TODO - consider modifying the logging logic or patching load_model so we can capture more detailed error messages
++            // and pass them back to the caller for better UX
++            return makeErr(1, "error loading model " + params.model);
++        }
++
++        llama.initialize();
++    } catch (std::exception &e) {
++        return makeErr(1, e.what());
++    } catch (...) {
++        return makeErr(1, "Unknown Exception initializing llama server");
++    }
++    return makeErr(0, "");
++}
++
++void llama_server_start()
++{
++     // TODO mutex to protect thread creation
++    ext_server_thread = std::thread([&]()
++    {
++        ext_server_running = true;
++        try {
++            LOG_TEE("llama server main loop starting\n");
++            ggml_time_init();
++            while (ext_server_running.load())
++            {
++                if (!llama.update_slots()) {
++                    LOG_TEE("unexpected error in llama server update_slots - exiting main loop\n");
++                    break;
++                }
++            }
++        } catch (std::exception &e) {
++            LOG_TEE("caught exception in llama server main loop: %s\n", e.what());
++        } catch (...) {
++            LOG_TEE("caught unknown exception in llama server main loop\n");
++        }
++        LOG_TEE("\nllama server shutting down\n");
++        llama_backend_free();
++    });
++}
++
++void llama_server_stop() {
++    // TODO - too verbose, remove once things are solid
++    LOG_TEE("requesting llama server shutdown\n");
++    ext_server_running = false;
++    ext_server_thread.join();
++    LOG_TEE("llama server shutdown complete\n");
++}
++
++ext_server_completion_resp llama_server_completion(const char *json_req) {
++    std::string msg;
++    ext_server_completion_resp resp = {
++        0,
++        NULL,
++    };
++    try {
++        json data = json::parse(json_req);
++        resp.task_id = llama.request_completion(data, false, false, -1);
++        return resp;
++    } catch (std::exception &e) {
++        msg = e.what();
++    } catch (...) {
++        msg = "Unknown Exception during completion";
++    }
++    const std::string::size_type size = msg.size();
++    resp.task_id = 0;
++    resp.err = new char[size + 1];
++    memcpy(resp.err, msg.c_str(), size + 1);
++    return resp;
++}
++
++ext_task_result llama_server_completion_next_result(const int task_id) {
++    std::string msg;
++    ext_task_result resp = {-1,false,false,NULL};
++    try {
++        task_result result = llama.next_result(task_id);
++        std::string result_json = result.result_json.dump(-1, ' ', false, json::error_handler_t::replace);
++        const std::string::size_type size = result_json.size();
++        resp.id = result.id;
++        resp.stop = result.stop;
++        resp.error = result.error;
++        resp.result_json = new char[size + 1];
++        memcpy(resp.result_json, result_json.c_str(), size + 1);
++        if (result.error) {
++            llama.request_cancel(task_id);
++        } else if (result.stop) {
++            llama.request_cancel(task_id);
++        }
++        return resp;
++    } catch (std::exception &e) {
++        msg = e.what(); // TODO - json?
++    } catch (...) {
++        msg = "Unknown Exception during completion";
++    }
++    resp.error = true;
++    const std::string::size_type size = msg.size();
++    resp.result_json = new char[size + 1];
++    memcpy(resp.result_json, msg.c_str(), size + 1);
++    return resp;
++}
++
++ext_server_err llama_server_completion_cancel(const int task_id) {
++    try {
++        llama.request_cancel(task_id);
++    } catch (std::exception &e) {
++        return makeErr(1, e.what());
++    } catch (...) {
++        return makeErr(1, "Unknown Exception running llama server");
++    }
++    return makeErr(0, "");
++}
++
++
++ext_server_err llama_server_tokenize(const char *json_req, ext_server_resp *resp) {
++    resp->json_resp = NULL;
++    try {
++        const json body = json::parse(json_req);
++        std::vector<llama_token> tokens;
++        if (body.count("content") != 0)
++        {
++            tokens = llama.tokenize(body["content"], false);
++        }
++        const json data = format_tokenizer_response(tokens);
++        std::string result_json = data.dump();
++        const std::string::size_type size = result_json.size();
++        resp->json_resp = new char[size + 1];
++        memcpy(resp->json_resp, result_json.c_str(), size + 1);
++    } catch (std::exception &e) {
++        return makeErr(1, e.what());
++    } catch (...) {
++        return makeErr(1, "Unknown Exception during tokenize");
++    }
++    return makeErr(0, "");
++}
++
++ext_server_err llama_server_detokenize(const char *json_req, ext_server_resp *resp) {
++    resp->json_resp = NULL;
++    try {
++        const json body = json::parse(json_req);
++        std::string content;
++        if (body.count("tokens") != 0)
++        {
++            const std::vector<llama_token> tokens = body["tokens"];
++            content = tokens_to_str(llama.ctx, tokens.cbegin(), tokens.cend());
++        }
++        const json data = format_detokenized_response(content);
++        std::string result_json = data.dump();
++        const std::string::size_type size = result_json.size();
++        resp->json_resp = new char[size + 1];
++        memcpy(resp->json_resp, result_json.c_str(), size + 1);
++    } catch (std::exception &e) {
++        return makeErr(1, e.what());
++    } catch (...) {
++        return makeErr(1, "Unknown Exception during detokenize");
++    }
++    return makeErr(0, "");
++}
++
++ext_server_err llama_server_embedding(const char *json_req, ext_server_resp *resp) {
++    resp->json_resp = NULL;
++    try {
++        const json body = json::parse(json_req);
++        json prompt;
++        if (body.count("content") != 0)
++        {
++            prompt = body["content"];
++        }
++        else
++        {
++            prompt = "";
++        }
++        const int task_id = llama.request_completion({ {"prompt", prompt}, { "n_predict", 0} }, false, true, -1);
++        task_result result = llama.next_result(task_id);
++        std::string result_json = result.result_json.dump();
++        const std::string::size_type size = result_json.size();
++        resp->json_resp = new char[size + 1];
++        memcpy(resp->json_resp, result_json.c_str(), size + 1);
++    } catch (std::exception &e) {
++        return makeErr(1, e.what());
++    } catch (...) {
++        return makeErr(1, "Unknown Exception during detokenize");
++    }
++    return makeErr(0, "");
++}
++
++#endif // LLAMA_SERVER_LIBRARY
+\ No newline at end of file
+diff --git a/examples/server/server.h b/examples/server/server.h
+new file mode 100644
+index 0000000..4d03b1e
+--- /dev/null
++++ b/examples/server/server.h
+@@ -0,0 +1,83 @@
++#if defined(LLAMA_SERVER_LIBRARY)
++#ifndef LLAMA_SERVER_H
++#define LLAMA_SERVER_H
++#include <stddef.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <stdbool.h>
++
++// This exposes extern C entrypoints into the llama_server 
++// To enable the server compile with LLAMA_SERVER_LIBRARY
++
++#ifdef __cplusplus
++extern "C"
++{
++#endif
++    // TODO - clean the type def's up a bit for better consistency
++    typedef struct ext_server_err {
++        uint32_t code; // 0 on success, > 0 on error
++        char *err; // null if code == 0; else contains error message.  Caller responsible for freeing memory
++    } ext_server_err;
++
++    typedef struct ext_server_lora_adapter {
++        char *adapter;
++        float scale;
++        struct ext_server_lora_adapter *next;
++    } ext_server_lora_adapter;
++    typedef struct ext_server_params
++    {
++        char *model;
++        uint32_t n_ctx;         // text context, 0 = from model
++        uint32_t n_batch;       // prompt processing maximum batch size
++        uint32_t n_threads;     // number of threads to use for generation
++        int32_t n_parallel;     // number of parallel sequences to decodewra
++        float rope_freq_base;   // RoPE base frequency, 0 = from model
++        float rope_freq_scale;  // RoPE frequency scaling factor, 0 = from model
++        bool memory_f16;        // use f16 instead of f32 for memory kv
++        int32_t n_gpu_layers;   // number of layers to store in VRAM (-1 - use default)
++        int32_t main_gpu;       // the GPU that is used for scratch and small tensors
++        bool use_mlock;         // force system to keep model in RAM
++        bool use_mmap;          // use mmap if possible
++        bool numa;              // attempt optimizations that help on some NUMA systems
++        bool embedding;         // get only sentence embedding
++        ext_server_lora_adapter* lora_adapters;
++    } ext_server_params;
++
++    // Initialize the server once per process
++    ext_server_err llama_server_init(ext_server_params *sparams);
++
++    // Run the main loop
++    void llama_server_start();
++    // Stop the main loop
++    void llama_server_stop();
++
++    typedef struct ext_task_result
++    {
++        int id;
++        bool stop;
++        bool error;
++        char* result_json; // caller responsible to free this memory
++    } ext_task_result;
++    
++    typedef struct ext_server_completion_resp {
++        int task_id; // < 0 on error, >= 0 on success
++        char *err; // null if task_id >= 0; else contains error message.  Caller responsible for freeing memory
++    } ext_server_completion_resp;
++    ext_server_completion_resp llama_server_completion(const char *json_req);
++    ext_task_result llama_server_completion_next_result(const int task_id);
++    ext_server_err llama_server_completion_cancel(const int task_id);
++
++    // Caller responsible for freeing json_resp
++    typedef struct ext_server_resp {
++        char *json_resp; // Caller responsible for freeing string
++    } ext_server_resp;
++    ext_server_err llama_server_tokenize(const char *json_req, ext_server_resp *resp);
++    ext_server_err llama_server_detokenize(const char *json_req, ext_server_resp *resp);
++    ext_server_err llama_server_embedding(const char *json_req, ext_server_resp *resp);
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif
++#endif // LLAMA_SERVER_LIBRARY
+\ No newline at end of file
+diff --git a/ggml-cuda.cu b/ggml-cuda.cu
+index 85f7a29..ce51364 100644
+--- a/ggml-cuda.cu
++++ b/ggml-cuda.cu
+@@ -6410,6 +6410,7 @@ static cudaError_t ggml_cuda_cpy_tensor_2d(
+         CUDA_CHECK(cudaGetDevice(&id));
+         src_ptr = (char *) extra->data_device[id];
+     } else {
++        fprintf(stderr, "ggml_cuda_cpy_tensor_2d assert: backend: %d\n", src->backend);
+         GGML_ASSERT(false);
+     }
+     char * dst_ptr = (char *) dst;
+-- 
+2.39.3 (Apple Git-145)
+

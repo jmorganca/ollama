@@ -126,10 +126,6 @@ func load(c *gin.Context, modelName string, reqOpts map[string]interface{}, sess
 		loaded.Options = &opts
 	}
 
-	// update options for the loaded llm
-	// TODO(mxyng): this isn't thread safe, but it should be fine for now
-	loaded.runner.SetOptions(opts)
-
 	loaded.expireAt = time.Now().Add(sessionDuration)
 
 	if loaded.expireTimer == nil {

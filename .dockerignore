@@ -2,7 +2,7 @@
 ollama
 app
 dist
-scripts
 llm/llama.cpp/gguf
 .env
 .cache
+test_data
