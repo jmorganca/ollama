@@ -28,10 +28,10 @@ import (
 	"golang.org/x/term"
 
 	"github.com/jmorganca/ollama/api"
+	"github.com/jmorganca/ollama/editor"
 	"github.com/jmorganca/ollama/format"
 	"github.com/jmorganca/ollama/parser"
 	"github.com/jmorganca/ollama/progressbar"
-	"github.com/jmorganca/ollama/readline"
 	"github.com/jmorganca/ollama/server"
 	"github.com/jmorganca/ollama/version"
 )
@@ -584,30 +584,24 @@ func generateInteractive(cmd *cobra.Command, model string, wordWrap bool, format
 		fmt.Fprintln(os.Stderr, "")
 	}
 
-	prompt := readline.Prompt{
-		Prompt:         ">>> ",
-		AltPrompt:      "... ",
-		Placeholder:    "Send a message (/? for help)",
-		AltPlaceholder: `Use """ to end multi-line input`,
+	prompt := editor.Prompt{
+		Prompt:      ">>> ",
+		AltPrompt:   "... ",
+		Placeholder: "Send a message (/? for help)",
 	}
 
-	scanner, err := readline.New(prompt)
+	ed, err := editor.New(prompt)
 	if err != nil {
 		return err
 	}
 
-	fmt.Print(readline.StartBracketedPaste)
-	defer fmt.Printf(readline.EndBracketedPaste)
-
-	var multiLineBuffer string
-
 	for {
-		line, err := scanner.Readline()
+		line, err := ed.HandleInput()
 		switch {
 		case errors.Is(err, io.EOF):
 			fmt.Println()
 			return nil
-		case errors.Is(err, readline.ErrInterrupt):
+		case errors.Is(err, editor.ErrInterrupt):
 			if line == "" {
 				fmt.Println("\nUse Ctrl-D or /bye to exit.")
 			}
@@ -620,20 +614,6 @@ func generateInteractive(cmd *cobra.Command, model string, wordWrap bool, format
 		line = strings.TrimSpace(line)
 
 		switch {
-		case scanner.Prompt.UseAlt:
-			if strings.HasSuffix(line, `"""`) {
-				scanner.Prompt.UseAlt = false
-				multiLineBuffer += strings.TrimSuffix(line, `"""`)
-				line = multiLineBuffer
-				multiLineBuffer = ""
-			} else {
-				multiLineBuffer += line + " "
-				continue
-			}
-		case strings.HasPrefix(line, `"""`):
-			scanner.Prompt.UseAlt = true
-			multiLineBuffer = strings.TrimPrefix(line, `"""`) + " "
-			continue
 		case strings.HasPrefix(line, "/list"):
 			args := strings.Fields(line)
 			if err := ListHandler(cmd, args[1:]); err != nil {
@@ -644,9 +624,9 @@ func generateInteractive(cmd *cobra.Command, model string, wordWrap bool, format
 			if len(args) > 1 {
 				switch args[1] {
 				case "history":
-					scanner.HistoryEnable()
+					//scanner.HistoryEnable()
 				case "nohistory":
-					scanner.HistoryDisable()
+					//scanner.HistoryDisable()
 				case "wordwrap":
 					wordWrap = true
 					fmt.Println("Set 'wordwrap' mode.")

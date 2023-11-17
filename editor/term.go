@@ -1,6 +1,6 @@
 //go:build aix || darwin || dragonfly || freebsd || (linux && !appengine) || netbsd || openbsd || os400 || solaris
 
-package readline
+package editor
 
 import (
 	"syscall"

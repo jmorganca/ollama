@@ -1,4 +1,4 @@
-package readline
+package editor
 
 const (
 	CharNull      = 0

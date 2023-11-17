@@ -1,4 +1,4 @@
-package readline
+package editor
 
 import (
 	"errors"

@@ -1,4 +1,4 @@
-package readline
+package editor
 
 import (
 	"bufio"
@@ -23,7 +23,6 @@ type Terminal struct {
 type Instance struct {
 	Prompt   *Prompt
 	Terminal *Terminal
-	History  *History
 }
 
 func New(prompt Prompt) (*Instance, error) {
@@ -32,40 +31,33 @@ func New(prompt Prompt) (*Instance, error) {
 		return nil, err
 	}
 
-	history, err := NewHistory()
-	if err != nil {
-		return nil, err
-	}
-
 	return &Instance{
 		Prompt:   &prompt,
 		Terminal: term,
-		History:  history,
 	}, nil
 }
 
-func (i *Instance) Readline() (string, error) {
+func (i *Instance) HandleInput() (string, error) {
 	prompt := i.Prompt.Prompt
 	if i.Prompt.UseAlt {
 		prompt = i.Prompt.AltPrompt
 	}
 	fmt.Print(prompt)
 
-	fd := int(syscall.Stdin)
-	termios, err := SetRawMode(fd)
+	termios, err := SetRawMode(syscall.Stdin)
 	if err != nil {
 		return "", err
 	}
-	defer UnsetRawMode(fd, termios)
+	defer UnsetRawMode(syscall.Stdin, termios)
 
 	buf, _ := NewBuffer(i.Prompt)
 
 	var esc bool
 	var escex bool
-	var metaDel bool
 	var pasteMode PasteMode
 
-	var currentLineBuf []rune
+	fmt.Print(StartBracketedPaste)
+	defer fmt.Printf(EndBracketedPaste)
 
 	for {
 		if buf.IsEmpty() {
@@ -77,13 +69,12 @@ func (i *Instance) Readline() (string, error) {
 		}
 
 		r, err := i.Terminal.Read()
+		if err != nil {
+			return "", io.EOF
+		}
 
 		if buf.IsEmpty() {
 			fmt.Print(ClearToEOL)
-		}
-
-		if err != nil {
-			return "", io.EOF
 		}
 
 		if escex {
@@ -91,19 +82,9 @@ func (i *Instance) Readline() (string, error) {
 
 			switch r {
 			case KeyUp:
-				if i.History.Pos > 0 {
-					if i.History.Pos == i.History.Size() {
-						currentLineBuf = []rune(buf.String())
-					}
-					buf.Replace(i.History.Prev())
-				}
+				buf.MoveUp()
 			case KeyDown:
-				if i.History.Pos < i.History.Size() {
-					buf.Replace(i.History.Next())
-					if i.History.Pos == i.History.Size() {
-						buf.Replace(currentLineBuf)
-					}
-				}
+				buf.MoveDown()
 			case KeyLeft:
 				buf.MoveLeft()
 			case KeyRight:
@@ -123,28 +104,16 @@ func (i *Instance) Readline() (string, error) {
 				} else if code == CharBracketedPasteEnd {
 					pasteMode = PasteModeEnd
 				}
-			case KeyDel:
-				if buf.Size() > 0 {
-					buf.Delete()
-				}
-				metaDel = true
 			case MetaStart:
-				buf.MoveToStart()
+				buf.MoveToBOL()
 			case MetaEnd:
-				buf.MoveToEnd()
-			default:
-				// skip any keys we don't know about
-				continue
+				buf.MoveToEOL()
 			}
 			continue
 		} else if esc {
 			esc = false
 
 			switch r {
-			case 'b':
-				buf.MoveLeftWord()
-			case 'f':
-				buf.MoveRightWord()
 			case CharEscapeEx:
 				escex = true
 			}
@@ -159,9 +128,9 @@ func (i *Instance) Readline() (string, error) {
 		case CharInterrupt:
 			return "", ErrInterrupt
 		case CharLineStart:
-			buf.MoveToStart()
+			buf.MoveToBOL()
 		case CharLineEnd:
-			buf.MoveToEnd()
+			buf.MoveToEOL()
 		case CharBackward:
 			buf.MoveLeft()
 		case CharForward:
@@ -169,56 +138,38 @@ func (i *Instance) Readline() (string, error) {
 		case CharBackspace, CharCtrlH:
 			buf.Remove()
 		case CharTab:
-			// todo: convert back to real tabs
 			for cnt := 0; cnt < 8; cnt++ {
 				buf.Add(' ')
 			}
 		case CharDelete:
-			if buf.Size() > 0 {
+			if len(buf.Buf) > 0 && buf.Buf[0].Size() > 0 {
 				buf.Delete()
 			} else {
 				return "", io.EOF
 			}
-		case CharKill:
-			buf.DeleteRemaining()
 		case CharCtrlU:
-			buf.DeleteBefore()
+			buf.RemoveBefore()
 		case CharCtrlL:
 			buf.ClearScreen()
 		case CharCtrlW:
-			buf.DeleteWord()
+			buf.RemoveWordBefore()
+		case CharCtrlJ:
+			buf.Add(r)
 		case CharEnter:
-			output := buf.String()
-			if output != "" {
-				i.History.Add([]rune(output))
+			if pasteMode == PasteModeStart {
+				buf.Add(r)
+				continue
 			}
 			buf.MoveToEnd()
 			fmt.Println()
-			switch pasteMode {
-			case PasteModeStart:
-				output = `"""` + output
-			case PasteModeEnd:
-				output = output + `"""`
-			}
-			return output, nil
+			return buf.String(), nil
 		default:
-			if metaDel {
-				metaDel = false
-				continue
-			}
 			if r >= CharSpace || r == CharEnter {
 				buf.Add(r)
 			}
 		}
 	}
-}
 
-func (i *Instance) HistoryEnable() {
-	i.History.Enabled = true
-}
-
-func (i *Instance) HistoryDisable() {
-	i.History.Enabled = false
 }
 
 func NewTerminal() (*Terminal, error) {

@@ -1,6 +1,5 @@
 //go:build darwin || freebsd || netbsd || openbsd
-
-package readline
+package editor
 
 import (
 	"syscall"

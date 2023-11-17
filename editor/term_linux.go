@@ -1,6 +1,5 @@
 //go:build linux || solaris
-
-package readline
+package editor
 
 import (
 	"syscall"
