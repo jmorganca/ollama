@@ -125,11 +125,11 @@ PARAMETER <parameter> <parametervalue>
 
 #### Template Variables
 
-| Variable        | Description                                                                                                  |
-| --------------- | ------------------------------------------------------------------------------------------------------------ |
-| `{{ .System }}` | The system prompt used to specify custom behavior, this must also be set in the Modelfile as an instruction. |
-| `{{ .Prompt }}` | The incoming prompt, this is not specified in the model file and will be set based on input.                 |
-| `{{ .First }}`  | A boolean value used to render specific template information for the first generation of a session.          |
+| Variable                          | Description                                                                                                  |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `{{ .System }}`                   | The system prompt used to specify custom behavior, this must also be set in the Modelfile as an instruction. |
+| `{{ .Prompt }}` or `{{ .User }}`  | The incoming prompt from the user, this is not specified in the model file and will be set based on input.   |
+| `{{ .First }}`                    | A boolean value used to render specific template information for the first generation of a session.          |
 
 ```modelfile
 TEMPLATE """

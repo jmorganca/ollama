@@ -50,7 +50,8 @@ type Model struct {
 
 type PromptVars struct {
 	System string
-	Prompt string
+	Prompt string // prompt and user are considered the same thing
+	User   string
 }
 
 func (m *Model) Prompt(vars *PromptVars) (string, error) {
