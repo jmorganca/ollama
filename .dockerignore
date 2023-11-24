@@ -3,7 +3,6 @@ ollama
 app
 dist
 scripts
-llm/llama.cpp/ggml
 llm/llama.cpp/gguf
 .env
 .cache

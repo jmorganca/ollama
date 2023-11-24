@@ -1,8 +1,3 @@
-[submodule "llm/llama.cpp/ggml"]
-    path = llm/llama.cpp/ggml
-    url = https://github.com/ggerganov/llama.cpp.git
-    ignore = dirty
-    shallow = true
 [submodule "llm/llama.cpp/gguf"]
     path = llm/llama.cpp/gguf
     url = https://github.com/ggerganov/llama.cpp.git
