@@ -105,7 +105,7 @@ func CreateHandler(cmd *cobra.Command, args []string) error {
 				return err
 			}
 
-			modelfile = bytes.ReplaceAll(modelfile, []byte(c.Args), []byte("@"+digest))
+			modelfile = bytes.ReplaceAll(modelfile, []byte(c.Args), []byte(digest))
 		}
 	}
 

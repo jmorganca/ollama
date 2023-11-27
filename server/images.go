@@ -267,8 +267,8 @@ func CreateModel(ctx context.Context, name string, commands []parser.Command, fn
 
 		switch c.Name {
 		case "model":
-			if strings.HasPrefix(c.Args, "@") {
-				blobPath, err := GetBlobsPath(strings.TrimPrefix(c.Args, "@"))
+			if strings.HasPrefix(c.Args, "sha256:") || strings.HasPrefix(c.Args, "@") {
+				blobPath, err := GetBlobsPath(c.Args)
 				if err != nil {
 					return err
 				}
