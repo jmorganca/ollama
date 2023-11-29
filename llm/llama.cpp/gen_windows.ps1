@@ -49,3 +49,7 @@ git_module_setup
 apply_patches
 build
 install
+
+# TODO - implement ROCm support on windows
+md gguf/build/winrocm/lib -ea 0
+echo $null >> gguf/build/winrocm/lib/.generated

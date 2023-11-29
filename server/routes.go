@@ -25,6 +25,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/jmorganca/ollama/api"
+	"github.com/jmorganca/ollama/gpu"
 	"github.com/jmorganca/ollama/llm"
 	"github.com/jmorganca/ollama/parser"
 	"github.com/jmorganca/ollama/version"
@@ -79,20 +80,6 @@ func load(c *gin.Context, modelName string, reqOpts map[string]interface{}, sess
 
 	if err := opts.FromMap(reqOpts); err != nil {
 		return nil, err
-	}
-
-	ctx := c.Request.Context()
-
-	// check if the loaded model is still running in a subprocess, in case something unexpected happened
-	if loaded.runner != nil {
-		if err := loaded.runner.Ping(ctx); err != nil {
-			log.Print("loaded llm process not responding, closing now")
-			// the subprocess is no longer running, so close it
-			loaded.runner.Close()
-			loaded.runner = nil
-			loaded.Model = nil
-			loaded.Options = nil
-		}
 	}
 
 	needLoad := loaded.runner == nil || // is there a model loaded?
@@ -905,9 +892,12 @@ func Serve(ln net.Listener) error {
 		os.Exit(0)
 	}()
 
-	if runtime.GOOS == "linux" {
+	if err := llm.Init(s.WorkDir); err != nil {
+		return fmt.Errorf("unable to initialize llm library %w", err)
+	}
+	if runtime.GOOS == "linux" { // TODO - windows too
 		// check compatibility to log warnings
-		if _, err := llm.CheckVRAM(); err != nil {
+		if _, err := gpu.CheckVRAM(); err != nil {
 			log.Print(err.Error())
 		}
 	}

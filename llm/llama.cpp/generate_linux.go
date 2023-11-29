@@ -1,3 +1,3 @@
 package llm
 
-//go:generate sh ./gen_linux.sh
+//go:generate bash ./gen_linux.sh

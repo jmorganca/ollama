@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # This script is intended to run inside the go generate
 # working directory must be ../llm/llama.cpp
 
@@ -30,6 +30,7 @@ git_module_setup
 apply_patches
 build
 
+# TODO - improve this to handle test cases that need it to be in "." around the tree
 # Enable local debug/run usecase
 if [ -e "gguf/ggml-metal.metal" ]; then
     cp gguf/ggml-metal.metal ../../

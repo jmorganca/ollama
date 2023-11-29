@@ -1,19 +1,44 @@
-# centos7 amd64 dependencies
-FROM --platform=linux/amd64 nvidia/cuda:11.3.1-devel-centos7 AS base-amd64
-RUN yum install -y https://repo.ius.io/ius-release-el7.rpm centos-release-scl && \
-    yum update -y && \
-    yum install -y devtoolset-10-gcc devtoolset-10-gcc-c++ git236 wget
-RUN wget "https://github.com/Kitware/CMake/releases/download/v3.27.6/cmake-3.27.6-linux-x86_64.sh" -O cmake-installer.sh && chmod +x cmake-installer.sh && ./cmake-installer.sh --skip-license --prefix=/usr/local
-ENV PATH /opt/rh/devtoolset-10/root/usr/bin:$PATH
+# Ubuntu 20.04 amd64 dependencies
+FROM --platform=linux/amd64 nvidia/cuda:11.7.1-devel-ubuntu22.04 AS base-amd64
+# ROCm only supports amd64
+ARG ROCM_VERSION=5.7
+# Note: https://rocm.docs.amd.com/en/latest/release/user_kernel_space_compat_matrix.html
+RUN apt-get update && \
+    apt-get install -y wget && \
+    wget "https://github.com/Kitware/CMake/releases/download/v3.22.1/cmake-3.22.1-linux-x86_64.sh" -O /tmp/cmake-installer.sh && \
+    chmod +x /tmp/cmake-installer.sh && /tmp/cmake-installer.sh --skip-license --prefix=/usr && \
+    mkdir --parents --mode=0755 /etc/apt/keyrings && \
+    wget https://repo.radeon.com/rocm/rocm.gpg.key -O - | gpg --dearmor > /etc/apt/keyrings/rocm.gpg && \
+    echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/rocm/apt/${ROCM_VERSION} focal main" > /etc/apt/sources.list.d/rocm.list && \
+    echo "Package: *" > /etc/apt/preferences.d/rocm-pin-600 && \
+    echo "Pin: release o=repo.radeon.com" >> /etc/apt/preferences.d/rocm-pin-600 && \
+    echo "Pin-Priority: 600" >> /etc/apt/preferences.d/rocm-pin-600 && \
+    apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y rocm-hip-libraries rocm-device-libs rocm-libs rocm-ocl-icd rocm-hip-sdk rocm-hip-libraries rocm-cmake rocm-clang-ocl rocm-dev
 
-# centos8 arm64 dependencies
-FROM --platform=linux/arm64 nvidia/cuda-arm64:11.3.1-devel-centos8 AS base-arm64
-RUN sed -i -e 's/mirrorlist/#mirrorlist/g' -e 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
-RUN yum install -y git cmake
+ENV ROCM_PATH=/opt/rocm
+
+# Ubuntu 22.04 arm64 dependencies
+FROM --platform=linux/arm64 nvidia/cuda:11.7.1-devel-ubuntu22.04 AS base-arm64
+RUN apt-get update && \
+    apt-get install -y wget && \
+    wget "https://github.com/Kitware/CMake/releases/download/v3.27.6/cmake-3.27.6-linux-aarch64.sh" -O /tmp/cmake-installer.sh && \
+    chmod +x /tmp/cmake-installer.sh && /tmp/cmake-installer.sh --skip-license --prefix=/usr
 
 FROM base-${TARGETARCH}
 ARG TARGETARCH
 ARG GOFLAGS="'-ldflags -w -s'"
+ARG CGO_CFLAGS
+ARG CLBLAST_VER=1.6.1
+
+# Common toolchain
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y gcc-11 g++-11 cpp-11 git ocl-icd-opencl-dev && \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 --slave /usr/bin/g++ g++ /usr/bin/g++-11 --slave /usr/bin/gcov gcov /usr/bin/gcov-11
+
+# CLBlast
+RUN wget -qO- https://github.com/CNugteren/CLBlast/archive/refs/tags/${CLBLAST_VER}.tar.gz | tar zxv -C /tmp/ && \
+    cd /tmp/CLBlast-${CLBLAST_VER} && mkdir build && cd build && cmake .. && make && make install
 
 # install go
 ADD https://dl.google.com/go/go1.21.3.linux-$TARGETARCH.tar.gz /tmp/go1.21.3.tar.gz
@@ -26,6 +51,7 @@ COPY . .
 ENV GOOS=linux
 ENV GOARCH=$TARGETARCH
 ENV GOFLAGS=$GOFLAGS
+ENV CGO_CFLAGS=${CGO_CFLAGS}
 
-RUN /usr/local/go/bin/go generate -tags cuda ./... && \
-    /usr/local/go/bin/go build -tags cuda .
+RUN /usr/local/go/bin/go generate ./... && \
+    /usr/local/go/bin/go build .

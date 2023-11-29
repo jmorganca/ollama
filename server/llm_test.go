@@ -2,14 +2,17 @@ package server
 
 import (
 	"context"
+	"os"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/jmorganca/ollama/api"
+	"github.com/jmorganca/ollama/llm"
 )
 
 // TODO - this would ideally be in the llm package, but that would require some refactoring of interfaces in the server
@@ -33,12 +36,16 @@ var (
 	}
 	resp = [2]string{
 		"once upon a time",
-		"fourth thursday",
+		"united states thanksgiving",
 	}
 )
 
 func TestIntegrationSimpleOrcaMini(t *testing.T) {
 	SkipIFNoTestData(t)
+	workDir, err := os.MkdirTemp("", "ollama")
+	require.NoError(t, err)
+	defer os.RemoveAll(workDir)
+	require.NoError(t, llm.Init(workDir))
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancel()
 	opts := api.DefaultOptions()
@@ -56,7 +63,13 @@ func TestIntegrationSimpleOrcaMini(t *testing.T) {
 // get true concurrency working with n_parallel support in the backend
 func TestIntegrationConcurrentPredictOrcaMini(t *testing.T) {
 	SkipIFNoTestData(t)
+
 	t.Skip("concurrent prediction on single runner not currently supported")
+
+	workDir, err := os.MkdirTemp("", "ollama")
+	require.NoError(t, err)
+	defer os.RemoveAll(workDir)
+	require.NoError(t, llm.Init(workDir))
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancel()
 	opts := api.DefaultOptions()
@@ -79,6 +92,10 @@ func TestIntegrationConcurrentPredictOrcaMini(t *testing.T) {
 
 func TestIntegrationConcurrentRunnersOrcaMini(t *testing.T) {
 	SkipIFNoTestData(t)
+	workDir, err := os.MkdirTemp("", "ollama")
+	require.NoError(t, err)
+	defer os.RemoveAll(workDir)
+	require.NoError(t, llm.Init(workDir))
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancel()
 	opts := api.DefaultOptions()
@@ -87,6 +104,7 @@ func TestIntegrationConcurrentRunnersOrcaMini(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(len(req))
 
+	t.Logf("Running %d concurrently", len(req))
 	for i := 0; i < len(req); i++ {
 		go func(i int) {
 			defer wg.Done()

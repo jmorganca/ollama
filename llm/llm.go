@@ -11,6 +11,7 @@ import (
 
 	"github.com/jmorganca/ollama/api"
 	"github.com/jmorganca/ollama/format"
+	"github.com/jmorganca/ollama/gpu"
 )
 
 type LLM interface {
@@ -19,7 +20,6 @@ type LLM interface {
 	Encode(context.Context, string) ([]int, error)
 	Decode(context.Context, []int) (string, error)
 	Close()
-	Ping(context.Context) error
 }
 
 func New(workDir, model string, adapters, projectors []string, opts api.Options) (LLM, error) {
@@ -78,5 +78,17 @@ func New(workDir, model string, adapters, projectors []string, opts api.Options)
 	opts.NumGQA = 0
 	opts.RopeFrequencyBase = 0.0
 	opts.RopeFrequencyScale = 0.0
-	return newLlamaExtServer(model, adapters, projectors, ggml.NumLayers(), opts)
+	gpuInfo := gpu.GetGPUInfo()
+	switch gpuInfo.Driver {
+	case "ROCM":
+		return newRocmShimExtServer(model, adapters, projectors, ggml.NumLayers(), opts)
+	default:
+		// Rely on the built-in CUDA based server which will fall back to CPU
+		return newLlamaExtServer(model, adapters, projectors, ggml.NumLayers(), opts)
+	}
+}
+
+// Give any native cgo implementations an opportunity to initialize
+func Init(workdir string) error {
+	return nativeInit(workdir)
 }

@@ -3,6 +3,7 @@ package llm
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"os"
@@ -112,12 +113,6 @@ type ImageData struct {
 	ID   int    `json:"id"`
 }
 
-type llama struct {
-	api.Options
-	ImageData []ImageData
-	Running
-}
-
 var (
 	errNvidiaSMI     = errors.New("warning: gpu support may not be enabled, check that you have installed GPU drivers: nvidia-smi command failed")
 	errAvailableVRAM = errors.New("not enough VRAM available, falling back to CPU only")
@@ -166,7 +161,8 @@ type prediction struct {
 }
 
 const maxBufferSize = 512 * format.KiloByte
-const maxRetries = 6
+const maxRetries = 3
+const retryDelay = 1 * time.Second
 
 type PredictOpts struct {
 	Prompt string
