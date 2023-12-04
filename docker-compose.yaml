@@ -7,7 +7,7 @@ services:
     container_name: ollama
     image: ollama/ollama
     healthcheck:
-      test: curl --fail http://localhost:11434/api/tags || exit 1
+      test: curl --fail http://localhost:11434 || exit 1
       interval: 2s
     ports:
       - "11434:11434"
