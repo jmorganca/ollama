@@ -1,0 +1,15 @@
+---
+version: "3.8"
+
+services:
+  ollama:
+    build: .
+    container_name: ollama
+    image: ollama/ollama
+    healthcheck:
+      test: curl --fail http://localhost:11434/api/tags || exit 1
+      interval: 2s
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama:/root/.ollama
