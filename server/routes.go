@@ -143,23 +143,10 @@ func load(ctx context.Context, workDir string, model *Model, reqOpts map[string]
 	return nil
 }
 
-func GenerateHandler(c *gin.Context) {
+func generate(c *gin.Context, req api.GenerateRequest, ch chan any) {
 	loaded.mu.Lock()
 	defer loaded.mu.Unlock()
-
 	checkpointStart := time.Now()
-
-	var req api.GenerateRequest
-	err := c.ShouldBindJSON(&req)
-	switch {
-	case errors.Is(err, io.EOF):
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "missing request body"})
-		return
-	case err != nil:
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
 	// validate the request
 	switch {
 	case req.Model == "":
@@ -208,38 +195,51 @@ func GenerateHandler(c *gin.Context) {
 		}
 	}
 
+	defer close(ch)
+	// an empty request loads the model
+	if req.Prompt == "" && req.Template == "" && req.System == "" {
+		ch <- api.GenerateResponse{CreatedAt: time.Now().UTC(), Model: req.Model, Done: true}
+		return
+	}
+
+	fn := func(r api.GenerateResponse) {
+		loaded.expireAt = time.Now().Add(sessionDuration)
+		loaded.expireTimer.Reset(sessionDuration)
+
+		r.Model = req.Model
+		r.CreatedAt = time.Now().UTC()
+		if r.Done {
+			r.TotalDuration = time.Since(checkpointStart)
+			r.LoadDuration = checkpointLoaded.Sub(checkpointStart)
+		}
+
+		if req.Raw {
+			// in raw mode the client must manage history on their own
+			r.Context = nil
+		}
+
+		ch <- r
+	}
+
+	if err := loaded.runner.Predict(c.Request.Context(), req.Context, prompt, req.Format, fn); err != nil {
+		ch <- gin.H{"error": err.Error()}
+	}
+}
+
+func GenerateHandler(c *gin.Context) {
+	var req api.GenerateRequest
+	err := c.ShouldBindJSON(&req)
+	switch {
+	case errors.Is(err, io.EOF):
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "missing request body"})
+		return
+	case err != nil:
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	ch := make(chan any)
-	go func() {
-		defer close(ch)
-		// an empty request loads the model
-		if req.Prompt == "" && req.Template == "" && req.System == "" {
-			ch <- api.GenerateResponse{CreatedAt: time.Now().UTC(), Model: req.Model, Done: true}
-			return
-		}
-
-		fn := func(r api.GenerateResponse) {
-			loaded.expireAt = time.Now().Add(sessionDuration)
-			loaded.expireTimer.Reset(sessionDuration)
-
-			r.Model = req.Model
-			r.CreatedAt = time.Now().UTC()
-			if r.Done {
-				r.TotalDuration = time.Since(checkpointStart)
-				r.LoadDuration = checkpointLoaded.Sub(checkpointStart)
-			}
-
-			if req.Raw {
-				// in raw mode the client must manage history on their own
-				r.Context = nil
-			}
-
-			ch <- r
-		}
-
-		if err := loaded.runner.Predict(c.Request.Context(), req.Context, prompt, req.Format, fn); err != nil {
-			ch <- gin.H{"error": err.Error()}
-		}
-	}()
+	go generate(c, req, ch)
 
 	if req.Stream != nil && !*req.Stream {
 		var response api.GenerateResponse
@@ -259,6 +259,40 @@ func GenerateHandler(c *gin.Context) {
 	}
 
 	streamResponse(c, ch)
+}
+
+func ChatCompletionsHandler(c *gin.Context) {
+	var req api.ChatCompletionRequest
+	err := c.ShouldBindJSON(&req)
+	switch {
+	case errors.Is(err, io.EOF):
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "missing request body"})
+		return
+	case err != nil:
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	ch := make(chan any)
+	go generate(c, req.ToGenerateRequest(), ch)
+	if !req.Stream {
+		var response api.GenerateResponse
+		generated := ""
+		for resp := range ch {
+			if r, ok := resp.(api.GenerateResponse); ok {
+				generated += r.Response
+				response = r
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+		}
+		chatResponse := response.ToChatCompletionResponse()
+		chatResponse.Choices[0].Message.Content = generated
+		c.JSON(http.StatusOK, chatResponse)
+		return
+	}
+
+	streamChatCompletionsResponse(c, ch)
 }
 
 func EmbeddingHandler(c *gin.Context) {
@@ -775,6 +809,7 @@ func Serve(ln net.Listener, allowOrigins []string) error {
 	r.POST("/api/show", ShowModelHandler)
 	r.POST("/api/blobs/:digest", CreateBlobHandler)
 	r.HEAD("/api/blobs/:digest", HeadBlobHandler)
+	r.POST("/api/chat/completions", ChatCompletionsHandler)
 
 	for _, method := range []string{http.MethodGet, http.MethodHead} {
 		r.Handle(method, "/", func(c *gin.Context) {
@@ -845,6 +880,38 @@ func streamResponse(c *gin.Context, ch chan any) {
 		}
 
 		bts, err := json.Marshal(val)
+		if err != nil {
+			log.Printf("streamResponse: json.Marshal failed with %s", err)
+			return false
+		}
+
+		// Delineate chunks with new-line delimiter
+		bts = append(bts, '\n')
+		if _, err := w.Write(bts); err != nil {
+			log.Printf("streamResponse: w.Write failed with %s", err)
+			return false
+		}
+
+		return true
+	})
+}
+
+func streamChatCompletionsResponse(c *gin.Context, ch chan any) {
+	c.Header("Content-Type", "application/x-ndjson")
+	c.Stream(func(w io.Writer) bool {
+		val, ok := <-ch
+		if !ok {
+			return false
+		}
+
+		r, ok := val.(api.GenerateResponse)
+		if !ok {
+			log.Printf("streamResponse: expected GenerateResponse, got %T", val)
+			return false
+		}
+		chatResponse := r.ToChatCompletionResponse()
+
+		bts, err := json.Marshal(chatResponse)
 		if err != nil {
 			log.Printf("streamResponse: json.Marshal failed with %s", err)
 			return false

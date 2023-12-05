@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"math/rand"
 	"os"
 	"reflect"
 	"strconv"
@@ -420,4 +421,119 @@ func FormatParams(params map[string][]string) (map[string]interface{}, error) {
 	}
 
 	return out, nil
+}
+
+
+type ChatCompletionUsage struct {
+	PromptTokens     int `json:"prompt_tokens"`
+	CompletionTokens int `json:"completion_tokens"`
+	TotalTokens      int `json:"total_tokens"`
+}
+
+type ChatCompletionMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+	Name    string `json:"name,omitempty"`
+}
+
+type ChatCompletionRequest struct {
+	Model          string                  `json:"model"`
+	Messages       []ChatCompletionMessage `json:"messages"`
+	MaxTokens      int                     `json:"max_tokens,omitempty"`
+	Temperature    float32                 `json:"temperature,omitempty"`
+	TopP           float32                 `json:"top_p,omitempty"`
+	N              int                     `json:"n,omitempty"`
+	Stream         bool                    `json:"stream,omitempty"`
+	Stop           []string                `json:"stop,omitempty"`
+	ResponseFormat string                  `json:"response_format,omitempty"`
+}
+
+func (r *ChatCompletionRequest) ToGenerateRequest() GenerateRequest {
+
+	prompt := strings.Builder{}
+	for _, m := range r.Messages {
+		prompt.WriteString(m.Role)
+		prompt.WriteString(": ")
+		prompt.WriteString(m.Content)
+		prompt.WriteString("\n")
+	}
+
+	return GenerateRequest{
+		Model:  r.Model,
+		Prompt: prompt.String(),
+		Format: r.ResponseFormat,
+		Stream: &r.Stream,
+	}
+}
+
+type ChatCompletionChoice struct {
+	Index        int                   `json:"index"`
+	Message      ChatCompletionMessage `json:"message"`
+	FinishReason string                `json:"finish_reason"`
+}
+
+type ChatCompletionResponse struct {
+	ID      string                 `json:"id"`
+	Object  string                 `json:"object"`
+	Created int64                  `json:"created"`
+	Model   string                 `json:"model"`
+	Choices []ChatCompletionChoice `json:"choices"`
+	Usage   ChatCompletionUsage    `json:"usage"`
+}
+
+func generateRandomId() string {
+	min := 1000
+	max := 1000000
+	return fmt.Sprintf("chatcmpl-%d", rand.Intn(max-min+1) + min)
+}
+
+func (r GenerateResponse) ToChatCompletionResponse() *ChatCompletionResponse {
+	choice := ChatCompletionChoice{
+		Index:        0,
+		Message:      ChatCompletionMessage{Content: r.Response, Role: "assistant"},
+		FinishReason: "stop",
+	}
+
+	return &ChatCompletionResponse{
+		ID:      generateRandomId(),
+		Object:  "chat.completion",
+		Created: r.CreatedAt.Unix(),
+		Model:   r.Model,
+		Choices: []ChatCompletionChoice{choice},
+	}
+}
+
+type ChatCompletionStreamResponse struct {
+	ID      string                       `json:"id"`
+	Object  string                       `json:"object"`
+	Created int64                        `json:"created"`
+	Model   string                       `json:"model"`
+	Choices []ChatCompletionStreamChoice `json:"choices"`
+}
+
+type ChatCompletionStreamChoiceDelta struct {
+	Content string `json:"content,omitempty"`
+	Role    string `json:"role,omitempty"`
+}
+
+type ChatCompletionStreamChoice struct {
+	Index        int                             `json:"index"`
+	Delta        ChatCompletionStreamChoiceDelta `json:"delta"`
+	FinishReason string                          `json:"finish_reason"`
+}
+
+func (r *GenerateResponse) ToChatCompletionStreamResponse() *ChatCompletionStreamResponse {
+	choice := ChatCompletionStreamChoice{
+		Index:        0,
+		Delta:        ChatCompletionStreamChoiceDelta{Content: r.Response, Role: "assistant"},
+		FinishReason: "null",
+	}
+
+	return &ChatCompletionStreamResponse{
+		ID:      generateRandomId(),
+		Object:  "chat.completion",
+		Created: r.CreatedAt.Unix(),
+		Model:   r.Model,
+		Choices: []ChatCompletionStreamChoice{choice},
+	}
 }

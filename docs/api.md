@@ -3,6 +3,7 @@
 ## Endpoints
 
 - [Generate a completion](#generate-a-completion)
+- [Chat Completions](#chat-completions)
 - [Create a Model](#create-a-model)
 - [List Local Models](#list-local-models)
 - [Show Model Information](#show-model-information)
@@ -286,6 +287,72 @@ curl http://localhost:11434/api/generate -d '{
   "eval_count": 13,
   "eval_duration": 1325948000
 }
+```
+
+## Chat Completions
+
+Refrence [OpenAI Chat Completions](https://platform.openai.com/docs/api-reference/chat/create)
+
+
+```shell
+POST /api/chat/completions
+```
+
+### Request
+
+```json
+{
+  "model": "mistral:latest",
+  "stream": false,
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant."
+    },
+    {
+      "role": "user",
+      "content": "Why is the sky blue?"
+    }
+  ]
+}
+```
+
+### Response
+
+```json
+{
+  "id": "chatcmpl-598319",
+  "object": "chat.completion",
+  "created": 1701357062,
+  "model": "mistral:latest",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "\nThe sky appears blue because of a phenomenon known as Rayleigh scattering, which is caused by the interaction between light and Earth's atmosphere. When sunlight enters the atmosphere, it collides with gas molecules and small particles, causing the shorter wavelengths of light (blue) to be scattered in every direction more frequently than the longer wavelengths (red). This scattering effect causes the blue light to be more visible from all directions, giving the sky its characteristic color."
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": { "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0 }
+}
+
+```
+
+## Streaming Response
+
+```shell
+{"id":"chatcmpl-855382","object":"chat.completion","created":1701355821,"model":"mistral:latest","choices":[{"index":0,"message":{"role":"assistant","content":"Hello"},"finish_reason":"stop"}],"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0}}
+{"id":"chatcmpl-388597","object":"chat.completion","created":1701355821,"model":"mistral:latest","choices":[{"index":0,"message":{"role":"assistant","content":"!"},"finish_reason":"stop"}],"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0}}
+{"id":"chatcmpl-995697","object":"chat.completion","created":1701355821,"model":"mistral:latest","choices":[{"index":0,"message":{"role":"assistant","content":" How"},"finish_reason":"stop"}],"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0}}
+{"id":"chatcmpl-422675","object":"chat.completion","created":1701355821,"model":"mistral:latest","choices":[{"index":0,"message":{"role":"assistant","content":" can"},"finish_reason":"stop"}],"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0}}
+{"id":"chatcmpl-722314","object":"chat.completion","created":1701355821,"model":"mistral:latest","choices":[{"index":0,"message":{"role":"assistant","content":" I"},"finish_reason":"stop"}],"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0}}
+{"id":"chatcmpl-782491","object":"chat.completion","created":1701355821,"model":"mistral:latest","choices":[{"index":0,"message":{"role":"assistant","content":" help"},"finish_reason":"stop"}],"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0}}
+{"id":"chatcmpl-76807","object":"chat.completion","created":1701355821,"model":"mistral:latest","choices":[{"index":0,"message":{"role":"assistant","content":" you"},"finish_reason":"stop"}],"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0}}
+{"id":"chatcmpl-687363","object":"chat.completion","created":1701355821,"model":"mistral:latest","choices":[{"index":0,"message":{"role":"assistant","content":" today"},"finish_reason":"stop"}],"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0}}
+{"id":"chatcmpl-462789","object":"chat.completion","created":1701355821,"model":"mistral:latest","choices":[{"index":0,"message":{"role":"assistant","content":"?"},"finish_reason":"stop"}],"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0}}
+{"id":"chatcmpl-433223","object":"chat.completion","created":1701355821,"model":"mistral:latest","choices":[{"index":0,"message":{"role":"assistant","content":""},"finish_reason":"stop"}],"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0}}
 ```
 
 ## Create a Model
