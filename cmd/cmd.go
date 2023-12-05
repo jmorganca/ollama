@@ -22,6 +22,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/containerd/console"
+
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
@@ -1041,6 +1043,11 @@ func checkServerHeartbeat(_ *cobra.Command, _ []string) error {
 
 func NewCLI() *cobra.Command {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
+	if runtime.GOOS == "windows" {
+		// Enable colorful ANSI escape code in Windows terminal (disabled by default)
+		console.ConsoleFromFile(os.Stdout)
+	}
 
 	rootCmd := &cobra.Command{
 		Use:           "ollama",
