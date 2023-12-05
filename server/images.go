@@ -59,12 +59,10 @@ func (m *Model) Prompt(request api.GenerateRequest) (string, error) {
 	}
 
 	var vars struct {
-		First  bool
 		System string
 		Prompt string
 	}
 
-	vars.First = len(request.Context) == 0
 	vars.System = m.System
 	vars.Prompt = request.Prompt
 

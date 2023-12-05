@@ -3,10 +3,8 @@
 
 FROM orca
 TEMPLATE """
-{{- if .First }}
 ### System:
 {{ .System }}
-{{- end }}
 ### User: 
 I hate it when my phone dies
 ### Response: 
