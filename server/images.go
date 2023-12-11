@@ -421,7 +421,11 @@ func CreateModel(ctx context.Context, name, modelFileDir string, commands []pars
 				// if the model is not in gguf format, pull the base model to try and get it in gguf format
 				if fromConfig.ModelFormat != "gguf" {
 					fn(api.ProgressResponse{Status: "updating base model"})
-					if err := PullModel(ctx, c.Args, &RegistryOptions{}, fn); err != nil {
+					parent, err := GetModel(c.Args)
+					if err != nil {
+						return err
+					}
+					if err := PullModel(ctx, parent.OriginalModel, &RegistryOptions{}, fn); err != nil {
 						log.Printf("error pulling model: %v", err)
 					}
 					// Reset the file pointer to the beginning of the file
