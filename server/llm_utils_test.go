@@ -7,7 +7,6 @@ import (
 	"path"
 	"runtime"
 	"testing"
-	"time"
 
 	"github.com/jmorganca/ollama/api"
 	"github.com/jmorganca/ollama/llm"
@@ -39,7 +38,6 @@ func PrepareModelForPrompts(t *testing.T, modelName string, opts api.Options) (*
 }
 
 func OneShotPromptResponse(t *testing.T, ctx context.Context, req api.GenerateRequest, model *Model, runner llm.LLM) string {
-	checkpointStart := time.Now()
 	prompt, err := model.Prompt(PromptVars{
 		System: req.System,
 		Prompt: req.Prompt,
@@ -56,12 +54,10 @@ func OneShotPromptResponse(t *testing.T, ctx context.Context, req api.GenerateRe
 			success <- true
 		}
 	}
-	checkpointLoaded := time.Now()
 	predictReq := llm.PredictOpts{
-		Prompt:           prompt,
-		Format:           req.Format,
-		CheckpointStart:  checkpointStart,
-		CheckpointLoaded: checkpointLoaded,
+		Prompt: prompt,
+		Format: req.Format,
+		Images: req.Images,
 	}
 	err = runner.Predict(ctx, predictReq, cb)
 	require.NoError(t, err, "predict call failed")
