@@ -1,0 +1,38 @@
+# Dockerfile variant to ensure we can build CPU only on linux
+FROM --platform=linux/amd64 ubuntu:20.04 AS base-cpu-amd64
+ENV CMAKE_ARCH "x86_64"
+
+FROM --platform=linux/arm64 ubuntu:20.04 AS base-cpu-arm64
+ENV CMAKE_ARCH "aarch64"
+
+FROM base-cpu-${TARGETARCH} AS cpu-builder
+ARG TARGETARCH
+ARG GOFLAGS
+ARG CGO_CFLAGS
+
+# Common toolchain
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y wget make gcc-10 g++-10 cpp-10 git ocl-icd-opencl-dev && \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 --slave /usr/bin/g++ g++ /usr/bin/g++-10 --slave /usr/bin/gcov gcov /usr/bin/gcov-10
+RUN wget "https://github.com/Kitware/CMake/releases/download/v3.27.6/cmake-3.27.6-linux-${CMAKE_ARCH}.sh" -O /tmp/cmake-installer.sh && \
+    chmod +x /tmp/cmake-installer.sh && /tmp/cmake-installer.sh --skip-license --prefix=/usr
+
+# install go
+ADD https://dl.google.com/go/go1.21.3.linux-$TARGETARCH.tar.gz /tmp/go1.21.3.tar.gz
+RUN mkdir -p /usr/local && tar xz -C /usr/local </tmp/go1.21.3.tar.gz
+
+# build the final binary
+FROM cpu-builder AS cpu-build
+WORKDIR /go/src/github.com/jmorganca/ollama
+COPY . .
+
+ENV GOOS=linux
+ENV GOARCH=$TARGETARCH
+ENV GOFLAGS=$GOFLAGS
+ENV CGO_CFLAGS=${CGO_CFLAGS}
+
+RUN /usr/local/go/bin/go generate ./... && \
+    /usr/local/go/bin/go build .
+
+FROM cpu-build AS test
+RUN /usr/local/go/bin/go test -v .

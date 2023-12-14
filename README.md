@@ -203,8 +203,6 @@ go build .
 ### Linux/Windows CUDA (NVIDIA)
 *Your operating system distribution may already have packages for NVIDIA CUDA. Distro packages are often preferable, but instructions are distro-specific. Please consult distro-specific docs for dependencies if available!*
 
-Note: at present, Ollama is optimized for GPU usage on linux, and requires the CUDA libraries at a minimum to compile even if you do not have an NVIDIA GPU.
-
 Install `cmake` and `golang` as well as [NVIDIA CUDA](https://developer.nvidia.com/cuda-downloads) development and runtime packages.
 Then generate dependencies:
 ```

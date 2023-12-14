@@ -13,28 +13,43 @@ source $(dirname $0)/gen_common.sh
 init_vars
 git_module_setup
 apply_patches
-CMAKE_DEFS="-DLLAMA_CUBLAS=on -DCMAKE_POSITION_INDEPENDENT_CODE=on -DLLAMA_NATIVE=off -DLLAMA_AVX=on -DLLAMA_AVX2=off -DLLAMA_AVX512=off -DLLAMA_FMA=off -DLLAMA_F16C=off ${CMAKE_DEFS}"
+if [ -d /usr/local/cuda/lib64/ ] ; then
+    CMAKE_DEFS="-DLLAMA_CUBLAS=on -DCMAKE_POSITION_INDEPENDENT_CODE=on -DLLAMA_NATIVE=off -DLLAMA_AVX=on -DLLAMA_AVX2=off -DLLAMA_AVX512=off -DLLAMA_FMA=off -DLLAMA_F16C=off ${CMAKE_DEFS}"
+else
+    CMAKE_DEFS="-DCMAKE_POSITION_INDEPENDENT_CODE=on -DLLAMA_NATIVE=off -DLLAMA_AVX=on -DLLAMA_AVX2=off -DLLAMA_AVX512=off -DLLAMA_FMA=off -DLLAMA_F16C=off ${CMAKE_DEFS}"
+fi
 BUILD_DIR="gguf/build/cuda"
 LIB_DIR="${BUILD_DIR}/lib"
 mkdir -p ../../dist/
 build
-# TODO - explore mechanism to soften the hard cuda dependency on linux
-#        by conditionally building some archive here that aggregates the cuda libs if present
-#        so that the cgo flags link this intermediate archive instead of the underlying cuda libs
-# 
-# gcc -fPIC -g -shared -o ${LIB_DIR}/libcuda_server.so \
-#     -Wl,--whole-archive \
-#     ${BUILD_DIR}/examples/server/CMakeFiles/ext_server.dir/server.cpp.o \
-#     ${BUILD_DIR}/common/libcommon.a \
-#     ${BUILD_DIR}/libllama.a \
-#     ${BUILD_DIR}/examples/llava/libllava_static.a \
-#     -Wl,--no-whole-archive \
-#     -lrt -lpthread -ldl -lstdc++ -lm \
-#     /usr/local/cuda/lib64/libcudart_static.a \
-#     /usr/local/cuda/lib64/libcublas_static.a \
-#     /usr/local/cuda/lib64/libcublasLt_static.a \
-#     /usr/local/cuda/lib64/libcudadevrt.a \
-#     /usr/local/cuda/lib64/libculibos.a
+
+if [ -d /usr/local/cuda/lib64/ ] ; then
+    pwd
+    ar -M <<EOF
+create ${BUILD_DIR}/libollama.a
+addlib ${BUILD_DIR}/examples/server/libext_server.a
+addlib ${BUILD_DIR}/common/libcommon.a
+addlib ${BUILD_DIR}/libllama.a
+addlib ${BUILD_DIR}/libggml_static.a
+addlib /usr/local/cuda/lib64/libcudart_static.a
+addlib /usr/local/cuda/lib64/libcublas_static.a
+addlib /usr/local/cuda/lib64/libcublasLt_static.a
+addlib /usr/local/cuda/lib64/libcudadevrt.a
+addlib /usr/local/cuda/lib64/libculibos.a
+save
+end
+EOF
+else
+    ar -M <<EOF
+create ${BUILD_DIR}/libollama.a
+addlib ${BUILD_DIR}/examples/server/libext_server.a
+addlib ${BUILD_DIR}/common/libcommon.a
+addlib ${BUILD_DIR}/libllama.a
+addlib ${BUILD_DIR}/libggml_static.a
+save
+end
+EOF
+fi
 
 if [ -z "${ROCM_PATH}" ] ; then
     # Try the default location in case it exists

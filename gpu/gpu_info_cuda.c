@@ -19,6 +19,7 @@ const char *cuda_lib_paths[] = {
 #endif
 
 void cuda_init(cuda_init_resp_t *resp) {
+  nvmlReturn_t ret;
   resp->err = NULL;
   const int buflen = 256;
   char buf[buflen + 1];
@@ -56,6 +57,13 @@ void cuda_init(cuda_init_resp_t *resp) {
       return;
     }
   }
+
+  ret = (*resp->ch.initFn)();
+  if (ret != NVML_SUCCESS) {
+    snprintf(buf, buflen, "nvml vram init failure: %d", ret);
+    resp->err = strdup(buf);
+  }
+
   return;
 }
 
@@ -73,17 +81,9 @@ void cuda_check_vram(cuda_handle_t h, mem_info_t *resp) {
     return;
   }
 
-  ret = (*h.initFn)();
-  if (ret != NVML_SUCCESS) {
-    snprintf(buf, buflen, "nvml vram init failure: %d", ret);
-    resp->err = strdup(buf);
-    return;
-  }
-
   // TODO - handle multiple GPUs
   ret = (*h.getHandle)(0, &device);
   if (ret != NVML_SUCCESS) {
-    (*h.shutdownFn)();
     snprintf(buf, buflen, "unable to get device handle: %d", ret);
     resp->err = strdup(buf);
     return;
@@ -91,20 +91,12 @@ void cuda_check_vram(cuda_handle_t h, mem_info_t *resp) {
 
   ret = (*h.getMemInfo)(device, &memInfo);
   if (ret != NVML_SUCCESS) {
-    (*h.shutdownFn)();
     snprintf(buf, buflen, "device memory info lookup failure: %d", ret);
     resp->err = strdup(buf);
     return;
   }
   resp->total = memInfo.total;
   resp->free = memInfo.free;
-
-  ret = (*h.shutdownFn)();
-  if (ret != NVML_SUCCESS) {
-    snprintf(buf, buflen, "nvml vram shutdown failure: %d", ret);
-    resp->err = strdup(buf);
-  }
-
   return;
 }
 #endif  // __APPLE__

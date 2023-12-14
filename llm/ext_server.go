@@ -21,17 +21,7 @@ package llm
 #cgo linux CFLAGS: -D_GNU_SOURCE
 #cgo linux windows CFLAGS: -DGGML_CUDA_DMMV_X=32 -DGGML_CUDA_MMV_Y=1 -DGGML_CUDA_PEER_MAX_BATCH_SIZE=128 -DGGML_USE_CUBLAS
 #cgo linux LDFLAGS: -L/usr/local/cuda/targets/x86_64-linux/lib -L/usr/local/cuda/lib64 -L/usr/local/cuda/targets/x86_64-linux/lib/stubs
-#cgo linux LDFLAGS: ${SRCDIR}/llama.cpp/gguf/build/cuda/examples/server/libext_server.a
-#cgo linux LDFLAGS: ${SRCDIR}/llama.cpp/gguf/build/cuda/common/libcommon.a
-#cgo linux LDFLAGS: ${SRCDIR}/llama.cpp/gguf/build/cuda/libllama.a
-#cgo linux LDFLAGS: ${SRCDIR}/llama.cpp/gguf/build/cuda/libggml_static.a
-
-// Note: the following requires cuda library presence on linux to build, even if you only have rocm or CPU only
-#cgo linux LDFLAGS: /usr/local/cuda/lib64/libcudart_static.a
-#cgo linux LDFLAGS: /usr/local/cuda/lib64/libcublas_static.a
-#cgo linux LDFLAGS: /usr/local/cuda/lib64/libcublasLt_static.a
-#cgo linux LDFLAGS: /usr/local/cuda/lib64/libcudadevrt.a
-#cgo linux LDFLAGS: /usr/local/cuda/lib64/libculibos.a
+#cgo linux LDFLAGS: ${SRCDIR}/llama.cpp/gguf/build/cuda/libollama.a
 #cgo linux LDFLAGS: -lrt -lpthread -ldl -lstdc++ -lm
 #cgo windows LDFLAGS: -L${SRCDIR}/llama.cpp/gguf/build/wincuda/dist/bin
 #cgo windows LDFLAGS: -lext_server_shared -lpthread

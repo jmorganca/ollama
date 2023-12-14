@@ -20,6 +20,7 @@ const char *rocm_lib_paths[] = {
 #endif
 
 void rocm_init(rocm_init_resp_t *resp) {
+  rsmi_status_t ret;
   resp->err = NULL;
   const int buflen = 256;
   char buf[buflen + 1];
@@ -56,6 +57,13 @@ void rocm_init(rocm_init_resp_t *resp) {
       return;
     }
   }
+
+  ret = (*resp->rh.initFn)(0);
+  if (ret != RSMI_STATUS_SUCCESS) {
+    snprintf(buf, buflen, "rocm vram init failure: %d", ret);
+    resp->err = strdup(buf);
+  }
+
   return;
 }
 
@@ -70,10 +78,8 @@ void rocm_check_vram(rocm_handle_t h, mem_info_t *resp) {
   char buf[buflen + 1];
   int i;
 
-  ret = (*h.initFn)(0);
-  if (ret != RSMI_STATUS_SUCCESS) {
-    snprintf(buf, buflen, "rocm vram init failure: %d", ret);
-    resp->err = strdup(buf);
+  if (h.handle == NULL) {
+    resp->err = strdup("nvml handle sn't initialized");
     return;
   }
 
@@ -89,20 +95,17 @@ void rocm_check_vram(rocm_handle_t h, mem_info_t *resp) {
   // Get total memory - used memory for available memory
   ret = (*h.totalMemFn)(0, RSMI_MEM_TYPE_VRAM, &totalMem);
   if (ret != RSMI_STATUS_SUCCESS) {
-    (*h.shutdownFn)();
     snprintf(buf, buflen, "rocm total mem lookup failure: %d", ret);
     resp->err = strdup(buf);
     return;
   }
   ret = (*h.usageMemFn)(0, RSMI_MEM_TYPE_VRAM, &usedMem);
   if (ret != RSMI_STATUS_SUCCESS) {
-    (*h.shutdownFn)();
     snprintf(buf, buflen, "rocm usage mem lookup failure: %d", ret);
     resp->err = strdup(buf);
     return;
   }
 
-  (*h.shutdownFn)();
   resp->total = totalMem;
   resp->free = totalMem - usedMem;
   return;

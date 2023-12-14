@@ -3,6 +3,9 @@
 package gpu
 
 /*
+#cgo linux LDFLAGS: -lrt -lpthread -ldl -lstdc++ -lm
+#cgo windows LDFLAGS: -lpthread
+
 #include "gpu_info.h"
 
 */
@@ -26,6 +29,7 @@ var gpuHandles *handles = nil
 
 // Note: gpuMutex must already be held
 func initGPUHandles() {
+	// TODO - if the ollama build is CPU only, don't do these checks as they're irrelevant and confusing
 	log.Printf("Detecting GPU type")
 	gpuHandles = &handles{nil, nil}
 	var resp C.cuda_init_resp_t
@@ -61,20 +65,32 @@ func GetGPUInfo() GpuInfo {
 	}
 
 	var memInfo C.mem_info_t
-	var resp GpuInfo
+	resp := GpuInfo{"", 0, 0}
 	if gpuHandles.cuda != nil {
 		C.cuda_check_vram(*gpuHandles.cuda, &memInfo)
-		resp.Driver = "CUDA"
+		if memInfo.err != nil {
+			log.Printf("error looking up CUDA GPU memory: %s", C.GoString(memInfo.err))
+			C.free(unsafe.Pointer(memInfo.err))
+		} else {
+			resp.Driver = "CUDA"
+		}
 	} else if gpuHandles.rocm != nil {
 		C.rocm_check_vram(*gpuHandles.rocm, &memInfo)
-		resp.Driver = "ROCM"
-	} else {
+		if memInfo.err != nil {
+			log.Printf("error looking up ROCm GPU memory: %s", C.GoString(memInfo.err))
+			C.free(unsafe.Pointer(memInfo.err))
+		} else {
+			resp.Driver = "ROCM"
+		}
+	}
+	if resp.Driver == "" {
 		C.cpu_check_ram(&memInfo)
 		resp.Driver = "CPU"
 	}
 	if memInfo.err != nil {
-		log.Printf("error looking up GPU memory: %s", C.GoString(memInfo.err))
+		log.Printf("error looking up CPU memory: %s", C.GoString(memInfo.err))
 		C.free(unsafe.Pointer(memInfo.err))
+		return resp
 	}
 	resp.FreeMemory = uint64(memInfo.free)
 	resp.TotalMemory = uint64(memInfo.total)
@@ -113,7 +129,7 @@ func NumGPU(numLayer, fileSizeBytes int64, opts api.Options) int {
 	// 	log.Printf("%d MB VRAM available, insufficient to load current model (reuires %d MB) - falling back to CPU %d", freeBytes/(1024*1024), fileSizeBytes/(1024*1024))
 	// 	return 0
 	// }
-	log.Printf("%d MB VRAM available, loading up to %d GPU layers out of %d", info.FreeMemory/(1024*1024), layers, numLayer)
+	log.Printf("%d MB VRAM available, loading up to %d %s GPU layers out of %d", info.FreeMemory/(1024*1024), layers, info.Driver, numLayer)
 
 	return layers
 }
