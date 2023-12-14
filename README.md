@@ -183,6 +183,22 @@ ollama list
 
 `ollama serve` is used when you want to start ollama without running the desktop application.
 
+## Environment Variables
+
+Ollama can be configured using several environment variables. These variables allow you to customize the behavior of Ollama to suit your needs. Below are the key environment variables and their usage:
+
+### `OLLAMA_NOPRUNE`
+
+This environment variable controls whether Ollama should delete unused layers. If this variable is not set, Ollama will perform the deletion by default. Set this variable to any value to prevent Ollama from deleting unused layers.
+
+### `OLLAMA_HOST`
+
+Specifies the host and protocol for Ollama. If the protocol is not included in the variable (just the host is specified), `http` is used as the default protocol.
+
+### `OLLAMA_LOG_LEVEL`
+
+Determines the level of logging Ollama will perform. For example, setting this variable to `debug` will enable debug-level logging.
+
 ## Building
 
 Install `cmake` and `go`:

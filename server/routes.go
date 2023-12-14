@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -793,6 +794,34 @@ func CreateBlobHandler(c *gin.Context) {
 
 	c.Status(http.StatusCreated)
 }
+func RequestLogger() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		startTime := time.Now()
+
+		method := c.Request.Method
+		path := c.Request.URL.Path
+		queryParams := c.Request.URL.Query()
+		urlParams := c.Params
+
+		var bodyBytes []byte
+		if c.Request.Body != nil {
+			bodyBytes, _ = io.ReadAll(c.Request.Body)
+		}
+
+		c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+		bodyString := string(bodyBytes)
+
+		c.Next()
+
+		endTime := time.Now()
+
+		log.Printf("Request %s - %s; QueryParams: %v; URLParams: %v; Body: %s; ClientIP: %s; Status: %d; UserAgent: %s; Duration: %v",
+			method, path, queryParams, urlParams, bodyString,
+			c.ClientIP(), c.Writer.Status(),
+			c.Request.UserAgent(), endTime.Sub(startTime))
+	}
+}
 
 var defaultAllowOrigins = []string{
 	"localhost",
@@ -837,6 +866,12 @@ func Serve(ln net.Listener, allowOrigins []string) error {
 	defer os.RemoveAll(workDir)
 
 	r := gin.Default()
+
+	var logLevel = strings.ToLower(os.Getenv("OLLAMA_LOG_LEVEL"))
+	if logLevel == "debug" {
+		r.Use(RequestLogger())
+	}
+
 	r.Use(
 		cors.New(config),
 		func(c *gin.Context) {
