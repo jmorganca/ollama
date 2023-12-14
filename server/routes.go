@@ -28,6 +28,8 @@ import (
 	"github.com/jmorganca/ollama/llm"
 	"github.com/jmorganca/ollama/parser"
 	"github.com/jmorganca/ollama/version"
+
+	"github.com/xyproto/env/v2"
 )
 
 var mode string = gin.DebugMode
@@ -801,7 +803,7 @@ var defaultAllowOrigins = []string{
 }
 
 func Serve(ln net.Listener, allowOrigins []string) error {
-	if noprune := os.Getenv("OLLAMA_NOPRUNE"); noprune == "" {
+	if !env.Bool("OLLAMA_NOPRUNE") {
 		// clean up unused layers and manifests
 		if err := PruneLayers(); err != nil {
 			return err

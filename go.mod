@@ -7,6 +7,7 @@ require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/spf13/cobra v1.7.0
+	github.com/xyproto/env/v2 v2.2.4
 	golang.org/x/sync v0.3.0
 )
 

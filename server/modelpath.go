@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/xyproto/env/v2"
 )
 
 type ModelPath struct {
@@ -102,14 +104,11 @@ func (mp ModelPath) GetShortTagname() string {
 // modelsDir returns the value of the OLLAMA_MODELS environment variable or the user's home directory if OLLAMA_MODELS is not set.
 // The models directory is where Ollama stores its model files and manifests.
 func modelsDir() (string, error) {
-	if models, exists := os.LookupEnv("OLLAMA_MODELS"); exists {
-		return models, nil
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
+	path := env.Dir("OLLAMA_MODELS", "~/.ollama/models")
+	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return "", err
 	}
-	return filepath.Join(home, ".ollama", "models"), nil
+	return path, nil
 }
 
 // GetManifestPath returns the path to the manifest file for the given model path, it is up to the caller to create the directory if it does not exist.
@@ -118,7 +117,6 @@ func (mp ModelPath) GetManifestPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	return filepath.Join(dir, "manifests", mp.Registry, mp.Namespace, mp.Repository, mp.Tag), nil
 }
 

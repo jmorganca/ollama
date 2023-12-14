@@ -25,6 +25,7 @@ import (
 	"github.com/jmorganca/ollama/llm"
 	"github.com/jmorganca/ollama/parser"
 	"github.com/jmorganca/ollama/version"
+	"github.com/xyproto/env/v2"
 )
 
 type RegistryOptions struct {
@@ -610,7 +611,7 @@ func CreateModel(ctx context.Context, name, modelFileDir string, commands []pars
 		return err
 	}
 
-	if noprune := os.Getenv("OLLAMA_NOPRUNE"); noprune == "" {
+	if !env.Bool("OLLAMA_NOPRUNE") {
 		if err := deleteUnusedLayers(nil, deleteMap, false); err != nil {
 			return err
 		}
@@ -931,7 +932,7 @@ func PullModel(ctx context.Context, name string, regOpts *RegistryOptions, fn fu
 	// build deleteMap to prune unused layers
 	deleteMap := make(map[string]struct{})
 
-	if noprune = os.Getenv("OLLAMA_NOPRUNE"); noprune == "" {
+	if !env.Bool("OLLAMA_NOPRUNE") {
 		manifest, _, err = GetManifest(mp)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return err
