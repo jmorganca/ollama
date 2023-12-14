@@ -160,7 +160,7 @@ func newExtServer(server extServer, model string, adapters, projectors []string,
 	sparams.n_batch = C.uint(opts.NumBatch)
 	sparams.n_gpu_layers = C.int(numGPU)
 	sparams.main_gpu = C.int(opts.MainGPU)
-	sparams.n_parallel = 2 // TODO - wire up concurrency
+	sparams.n_parallel = 1 // TODO - wire up concurrency
 
 	// Always use the value encoded in the model
 	sparams.rope_freq_base = 0.0

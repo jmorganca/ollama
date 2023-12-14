@@ -1,4 +1,4 @@
-From 087cf3300e973d7790db8f7cad01d2a790de38be Mon Sep 17 00:00:00 2001
+From c04fb9fd2accd46fcc4c1935aef1573492977446 Mon Sep 17 00:00:00 2001
 From: Daniel Hiltgen <daniel@ollama.com>
 Date: Mon, 13 Nov 2023 12:25:58 -0800
 Subject: [PATCH] Expose callable API for server
@@ -46,7 +46,7 @@ index 859cd12..4ea47a7 100644
 +endif()
 \ No newline at end of file
 diff --git a/examples/server/server.cpp b/examples/server/server.cpp
-index d0cd8e1..5f5d4c5 100644
+index 39d1e83..f295d16 100644
 --- a/examples/server/server.cpp
 +++ b/examples/server/server.cpp
 @@ -5,6 +5,9 @@
@@ -59,7 +59,7 @@ index d0cd8e1..5f5d4c5 100644
  
  #ifndef NDEBUG
  // crash the server in debug mode, otherwise send an http 500 error
-@@ -2632,6 +2635,7 @@ static void append_to_generated_text_from_generated_token_probs(llama_server_con
+@@ -2631,6 +2634,7 @@ static void append_to_generated_text_from_generated_token_probs(llama_server_con
      }
  }
  
@@ -67,7 +67,7 @@ index d0cd8e1..5f5d4c5 100644
  int main(int argc, char **argv)
  {
      // own arguments required by this example
-@@ -3066,3 +3070,273 @@ int main(int argc, char **argv)
+@@ -3065,3 +3069,273 @@ int main(int argc, char **argv)
      llama_backend_free();
      return 0;
  }
@@ -439,10 +439,10 @@ index 0000000..d22f1b6
 +#endif // LLAMA_SERVER_LIBRARY
 \ No newline at end of file
 diff --git a/ggml-cuda.cu b/ggml-cuda.cu
-index 9e1acd3..ea64b55 100644
+index 019648b..cd0600b 100644
 --- a/ggml-cuda.cu
 +++ b/ggml-cuda.cu
-@@ -6505,6 +6505,7 @@ static cudaError_t ggml_cuda_cpy_tensor_2d(
+@@ -6746,6 +6746,7 @@ static cudaError_t ggml_cuda_cpy_tensor_2d(
          CUDA_CHECK(cudaGetDevice(&id));
          src_ptr = (char *) extra->data_device[id];
      } else {
