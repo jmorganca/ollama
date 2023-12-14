@@ -7,7 +7,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/jmorganca/ollama/api"
 	"github.com/jmorganca/ollama/llm"
@@ -32,7 +31,8 @@ func TestIntegrationMultimodal(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(workDir)
 	require.NoError(t, llm.Init(workDir))
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
+	// Note: this takes significantly longer on CPU than other mini tests (~300s)
+	ctx, cancel := context.WithTimeout(context.Background(), ContextTimeout)
 	defer cancel()
 	opts := api.DefaultOptions()
 	opts.Seed = 42

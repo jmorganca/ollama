@@ -3,6 +3,9 @@ import subprocess
 import sys
 from urllib.parse import urlparse
 from git import Repo
+from paramiko import SSHClient, SFTPClient, SSHConfig
+
+from machine import Machine
 
 # Helper script to be able to build on remote repos using git to push local changes
 # (e.g. particularly helpful to target a remote windows build system)
@@ -15,10 +18,13 @@ from git import Repo
 #        uploadpack = powershell git upload-pack
 #        receivepack = powershell git receive-pack
 #
+# You will also need to setup Windows SSH to use powershell instead of cmd
+#
 
 # TODO - add argpare and make this more configurable 
 # - force flag becomes optional
 # - generate, build or test ...
+# - convert to paramkio
 
 # Note: remote repo will need this run once:
 # git config --local receive.denyCurrentBranch updateInstead
@@ -43,10 +49,24 @@ url = urlparse(raw_url)
 # Windows urls don't quite parse properly
 if url.scheme == "" and url.netloc == "":
     url = urlparse("ssh://" + raw_url)
-print("URL: " + str(url))
+# print("URL: " + str(url))
 netloc = url.netloc.split(":")[0]
 path = url.path
 branch_name = repo.active_branch.name
+
+ssh = SSHClient()
+ssh.load_system_host_keys()
+m = Machine(ssh, netloc)
+m.assesMachine()
+# TODO - make this a utility...
+OS=m.os
+ARCH=m.arch
+GPU=m.gpu
+if OS == "windows":
+    BINARY_EXE=".exe"
+else:
+    BINARY_EXE=""
+print("Detected remote system as", OS, ARCH, GPU)
 
 print("Force pushing content to remote...")
 # Use with care given the force push
@@ -66,3 +86,9 @@ subprocess.check_call(['ssh', netloc, 'cd', path, ';', GoCmd, 'generate', './...
 print("Building")
 subprocess.check_call(['ssh', netloc, 'cd', path, ';', GoCmd, 'build', '.'])
 
+print("Building with coverage")
+subprocess.check_call(['ssh', netloc, 'cd', path, ';', GoCmd, 'build', '-cover', '-o', 'ollama-cov' + BINARY_EXE, '.'])
+
+print("Retrieving built binaries...")
+subprocess.check_call(['scp', netloc + ":" + path + "/ollama" + BINARY_EXE, "./dist/ollama-" + OS + "-" + ARCH + BINARY_EXE])
+subprocess.check_call(['scp', netloc + ":" + path + "/ollama-cov" + BINARY_EXE, "./dist/ollama-" + OS + "-" + ARCH + "-cov" + BINARY_EXE])

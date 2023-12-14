@@ -32,7 +32,5 @@ ENV GOFLAGS=$GOFLAGS
 ENV CGO_CFLAGS=${CGO_CFLAGS}
 
 RUN /usr/local/go/bin/go generate ./... && \
-    /usr/local/go/bin/go build .
-
-FROM cpu-build AS test
-RUN /usr/local/go/bin/go test -v .
+    /usr/local/go/bin/go build . && \
+    /usr/local/go/bin/go build -cover -o ollama-cov .

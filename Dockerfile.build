@@ -25,7 +25,7 @@ RUN apt-get update && \
     wget "https://github.com/Kitware/CMake/releases/download/v3.27.6/cmake-3.27.6-linux-aarch64.sh" -O /tmp/cmake-installer.sh && \
     chmod +x /tmp/cmake-installer.sh && /tmp/cmake-installer.sh --skip-license --prefix=/usr
 
-FROM base-${TARGETARCH}
+FROM base-${TARGETARCH} as builder
 ARG TARGETARCH
 ARG GOFLAGS="'-ldflags -w -s'"
 ARG CGO_CFLAGS
@@ -44,6 +44,7 @@ RUN wget -qO- https://github.com/CNugteren/CLBlast/archive/refs/tags/${CLBLAST_V
 ADD https://dl.google.com/go/go1.21.3.linux-$TARGETARCH.tar.gz /tmp/go1.21.3.tar.gz
 RUN mkdir -p /usr/local && tar xz -C /usr/local </tmp/go1.21.3.tar.gz
 
+FROM builder AS build
 # build the final binary
 WORKDIR /go/src/github.com/jmorganca/ollama
 COPY . .
@@ -54,4 +55,5 @@ ENV GOFLAGS=$GOFLAGS
 ENV CGO_CFLAGS=${CGO_CFLAGS}
 
 RUN /usr/local/go/bin/go generate ./... && \
-    /usr/local/go/bin/go build .
+    /usr/local/go/bin/go build . && \
+    /usr/local/go/bin/go build -cover -o ollama-cov .
