@@ -30,7 +30,6 @@ import (
 var libEmbed embed.FS
 
 var RocmShimMissing = fmt.Errorf("ROCm shim library not included in this build of ollama. Radeon GPUs are not supported")
-var NoShim = true
 
 type shimExtServer struct {
 	s       C.struct_rocm_llama_server
@@ -78,7 +77,7 @@ func (llm *shimExtServer) llama_server_release_json_resp(json_resp **C.char) {
 }
 
 func newRocmShimExtServer(model string, adapters, projectors []string, numLayers int64, opts api.Options) (extServer, error) {
-	if NoShim {
+	if !ShimPresent {
 		return nil, RocmShimMissing
 	}
 	log.Printf("Loading ROCM llm server")
@@ -207,6 +206,6 @@ func extractLib(workDir string) error {
 	case err != nil:
 		return fmt.Errorf("stat ROCm shim %s: %v", files[0], err)
 	}
-	NoShim = false
+	ShimPresent = true
 	return nil
 }

@@ -22,6 +22,9 @@ type LLM interface {
 	Close()
 }
 
+// Set to false on linux/windows if we are able to load the shim
+var ShimPresent = false
+
 func New(workDir, model string, adapters, projectors []string, opts api.Options) (LLM, error) {
 	if _, err := os.Stat(model); err != nil {
 		return nil, err
@@ -79,11 +82,10 @@ func New(workDir, model string, adapters, projectors []string, opts api.Options)
 	opts.RopeFrequencyBase = 0.0
 	opts.RopeFrequencyScale = 0.0
 	gpuInfo := gpu.GetGPUInfo()
-	switch gpuInfo.Driver {
-	case "ROCM":
+	if gpuInfo.Driver == "ROCM" && ShimPresent {
 		return newRocmShimExtServer(model, adapters, projectors, ggml.NumLayers(), opts)
-	default:
-		// Rely on the built-in CUDA based server which will fall back to CPU
+	} else {
+		// Rely on the built-in CUDA/Metal based server which will fall back to CPU
 		return newLlamaExtServer(model, adapters, projectors, ggml.NumLayers(), opts)
 	}
 }
