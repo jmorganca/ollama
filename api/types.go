@@ -215,6 +215,11 @@ type GenerateResponse struct {
 	Metrics
 }
 
+type Authorization struct {
+	Id     string `json:"id"`
+	Origin string `json:"origin"`
+}
+
 type ModelDetails struct {
 	Format            string   `json:"format"`
 	Family            string   `json:"family"`

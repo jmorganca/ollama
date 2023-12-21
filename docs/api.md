@@ -847,3 +847,124 @@ curl http://localhost:11434/api/embeddings -d '{
   ]
 }
 ```
+
+## Authorize Access
+
+```shell
+POST /api/authorize
+```
+
+Request authorization to use the Ollama API from the origin specified in either the `Origin`- or `Referer`-header.
+
+### Examples
+
+#### Request
+
+```shell
+curl http://localhost:11434/api/authorize -X POST -H 'Origin: https://ollama-gui.vercel.app' 
+```
+
+#### Response
+
+If the user chooses to grant access to the requesting origin. The origin is added to the `Access-Control-Allow-Origin`-header and a `201 - Created`-status and the `Location`-header to the created authorization are returned.
+
+201 - Created
+Header:
+```
+Location: /api/authorizations/aHR0cHM6Ly9ob3Bwc2NvdGNoLmlv
+```
+
+If the user chooses to reject the request, a response with `403 - Forbidden`-status and the error body are returned.
+
+403 - Forbidden
+```json
+{
+  "error": "user rejected authorization"
+}
+```
+
+If the user chooses to block the request, a response with `403 - Forbidden`-status and the error body are returned. All subsequent requests will be denied with the same response, until ollama is restarted. (This behaviour might change over time.)
+
+403 - Forbidden
+```json
+{
+  "error": "user blocked authorization"
+}
+```
+
+The library used to show the "grant access"-dialog is [zenity](https://pkg.go.dev/github.com/ncruces/zenity) with the [Question](https://pkg.go.dev/github.com/ncruces/zenity#Question)-dialog. This should only return `ErrCanceled, ErrExtraButton`, but in case it does return something else, this error is returned.
+
+403 - Forbidden
+```json
+{
+  "error": "authorization failed during user interaction with unexpected error: [root cause]"
+}
+```
+
+If the requesting origin is already authrized, the user is *not* prompted for consent. Instead the response with `409 - Conflict`-status is returned.
+
+409 - Conflict
+```json
+{
+  "error": "authorized origin already exists"
+}
+```
+
+
+## List Authorizations
+
+```shell
+GET /api/authorizations
+```
+
+List authorized origins `id` and `origin`. This should be used to show the users the list of all authorizations and allow to revoke them.
+
+### Examples
+
+#### Request
+```shell
+curl http://localhost:11434/api/authorizations -X GET
+```
+
+
+#### Response
+
+200 - OK
+```json
+[
+  {
+    "id": "aHR0cHM6Ly8wLjAuMC4wOio=",
+    "origin": "https://0.0.0.0:*"
+  },
+  {
+    "id": "aHR0cHM6Ly9ob3Bwc2NvdGNoLmlv",
+    "origin": "https://hoppscotch.io"
+  }
+]
+```
+
+## Delete Authorization
+
+```shell
+DELETE /api/authorizations/:id
+```
+
+This endpoint is used to revoke an authorized origins access.
+
+### URL Parameters
+
+- `id`: The unique identifier of the authorization to be revoked.
+
+### Examples
+
+#### Request
+
+```shell
+curl http://localhost:11434/api/authorizations/aHR0cHM6Ly9ob3Bwc2NvdGNoLmlv -X DELETE 
+```
+
+#### Response
+
+200 - OK
+```json
+```
