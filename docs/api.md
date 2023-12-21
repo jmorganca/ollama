@@ -283,6 +283,7 @@ curl http://localhost:11434/api/generate -d '{
     "num_batch": 2,
     "num_gqa": 1,
     "num_gpu": 1,
+    "tensor_split": "",
     "main_gpu": 0,
     "low_vram": false,
     "f16_kv": true,

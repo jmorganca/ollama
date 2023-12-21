@@ -112,6 +112,7 @@ type Runner struct {
 	NumBatch           int     `json:"num_batch,omitempty"`
 	NumGQA             int     `json:"num_gqa,omitempty"`
 	NumGPU             int     `json:"num_gpu,omitempty"`
+	TensorSplit        string  `json:"tensor_split,omitempty"`
 	MainGPU            int     `json:"main_gpu,omitempty"`
 	LowVRAM            bool    `json:"low_vram,omitempty"`
 	F16KV              bool    `json:"f16_kv,omitempty"`
