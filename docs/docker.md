@@ -7,12 +7,18 @@ The official [Ollama Docker image](https://hub.docker.com/r/ollama/ollama)
 
 ## Docker Hub
 
-To interact with the official Ollama images:
+To interact with the official Ollama images, see the below.
+
+### CPU
 
 ```bash
 # CPU only
 docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
-# With GPU
+```
+
+### GPU
+
+```bash
 docker run -d --gpus=all -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
 ```
 
