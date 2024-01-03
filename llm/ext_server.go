@@ -43,6 +43,7 @@ import (
 	"unsafe"
 
 	"github.com/jmorganca/ollama/api"
+	"github.com/jmorganca/ollama/format"
 	"github.com/jmorganca/ollama/gpu"
 )
 
@@ -234,12 +235,25 @@ func predict(llm extServer, opts api.Options, ctx context.Context, predict Predi
 		"penalize_nl":       opts.PenalizeNewline,
 		"seed":              opts.Seed,
 		"stop":              opts.Stop,
+		"grammar":           opts.Grammar,
 		"image_data":        imageData,
 		"cache_prompt":      true,
 	}
 
 	if predict.Format == "json" {
-		request["grammar"] = jsonGrammar
+		// If json schema is provided, convert it to a grammar and use that
+		if opts.Schema != "" {
+			if opts.Grammar != "" {
+				return fmt.Errorf("cannot use both a grammar and a json schema, please provide only one")
+			}
+			grammar, err := format.SchemaToGrammar(opts.Schema, nil)
+			if err != nil {
+				return fmt.Errorf("error converting json schema to grammar: %v", err)
+			}
+			request["grammar"] = grammar
+		} else {
+			request["grammar"] = format.JsonGrammar
+		}
 	}
 
 	retryDelay := 100 * time.Microsecond
