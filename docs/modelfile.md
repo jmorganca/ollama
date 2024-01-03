@@ -149,6 +149,7 @@ PARAMETER <parameter> <parametervalue>
 | num_predict    | Maximum number of tokens to predict when generating text. (Default: 128, -1 = infinite generation, -2 = fill context)                                                                                                                                   | int        | num_predict 42       |
 | top_k          | Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative. (Default: 40)                                                                        | int        | top_k 40             |
 | top_p          | Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9)                                                                 | float      | top_p 0.9            |
+| grammar        | The [GBNF](https://github.com/ggerganov/llama.cpp/tree/master/grammars) grammar used to constrain the model output. | string | grammar "root ::= [0-9]+" |
 
 ### TEMPLATE
 

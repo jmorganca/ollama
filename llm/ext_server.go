@@ -240,6 +240,8 @@ func predict(llm extServer, opts api.Options, ctx context.Context, predict Predi
 
 	if predict.Format == "json" {
 		request["grammar"] = jsonGrammar
+	} else {
+		request["grammar"] = opts.Grammar
 	}
 
 	retryDelay := 100 * time.Microsecond
