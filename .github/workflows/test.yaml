@@ -36,8 +36,69 @@ jobs:
           name: ${{ matrix.os }}-libraries
           path: |
             llm/llama.cpp/build/**/lib/*
+            !llm/llama.cpp/build/*/cuda/*
+            !llm/llama.cpp/build/*/rocm/*
+  generate-cuda:
+    strategy:
+      matrix:
+        cuda-version:
+          - '11.8.0'
+    runs-on: ubuntu-latest
+    container: nvidia/cuda:${{ matrix.cuda-version }}-devel-ubuntu20.04
+    steps:
+      - run: |
+          apt-get update && apt-get install -y git build-essential curl
+          curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.28.1/cmake-3.28.1-linux-x86_64.tar.gz \
+            | tar -zx -C /usr --strip-components 1
+        env:
+          DEBIAN_FRONTEND: noninteractive
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+          cache: true
+      - run: go get ./...
+      - run: |
+          git config --global --add safe.directory /__w/ollama/ollama
+          go generate -x ./...
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cuda-${{ matrix.cuda-version }}-libraries
+          path: |
+            llm/llama.cpp/build/*/cuda/**/lib/*
+  generate-rocm:
+    strategy:
+      matrix:
+        rocm-version:
+          - '6.0'
+    runs-on: ubuntu-latest
+    container: rocm/dev-ubuntu-20.04:${{ matrix.rocm-version }}
+    steps:
+      - run: |
+          apt-get update && apt-get install -y git build-essential curl rocm-libs
+          curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.28.1/cmake-3.28.1-linux-x86_64.tar.gz \
+            | tar -zx -C /usr --strip-components 1
+        env:
+          DEBIAN_FRONTEND: noninteractive
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+          cache: true
+      - run: go get ./...
+      - run: |
+          git config --global --add safe.directory /__w/ollama/ollama
+          go generate -x ./...
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rocm-${{ matrix.rocm-version }}-libraries
+          path: |
+            llm/llama.cpp/build/*/rocm/**/lib/*
   lint:
-    needs: generate
+    needs:
+      - generate
+      - generate-cuda
+      - generate-rocm
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -54,9 +115,22 @@ jobs:
         with:
           name: ${{ matrix.os }}-libraries
           path: llm/llama.cpp/build
+      - if: ${{ matrix.os == 'ubuntu-latest' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: cuda-11.8.0-libraries
+          path: llm/llama.cpp/build/cuda
+      - if: ${{ matrix.os == 'ubuntu-latest' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: rocm-6.0-libraries
+          path: llm/llama.cpp/build/rocm
       - uses: golangci/golangci-lint-action@v3
   test:
-    needs: generate
+    needs:
+      - generate
+      - generate-cuda
+      - generate-rocm
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -74,5 +148,19 @@ jobs:
         with:
           name: ${{ matrix.os }}-libraries
           path: llm/llama.cpp/build
+      - if: ${{ matrix.os == 'ubuntu-latest' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: cuda-11.8.0-libraries
+          path: llm/llama.cpp/build/cuda
+      - if: ${{ matrix.os == 'ubuntu-latest' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: rocm-6.0-libraries
+          path: llm/llama.cpp/build/rocm
       - run: go build
       - run: go test -v ./...
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os }}-binaries
+          path: ollama
