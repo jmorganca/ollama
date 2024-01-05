@@ -58,7 +58,7 @@ void dynamic_shim_init(const char *libPath, struct dynamic_llama_server *s,
       {"", NULL},
   };
 
-  printf("Lazy loading %s library\n", libPath);
+  printf("loading %s library\n", libPath);
   s->handle = LOAD_LIBRARY(libPath, RTLD_NOW);
   if (!s->handle) {
     err->id = -1;

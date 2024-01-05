@@ -22,8 +22,6 @@ type LLM interface {
 	Close()
 }
 
-var AvailableShims = map[string]string{}
-
 func New(workDir, model string, adapters, projectors []string, opts api.Options) (LLM, error) {
 	if _, err := os.Stat(model); err != nil {
 		return nil, err
@@ -73,7 +71,7 @@ func New(workDir, model string, adapters, projectors []string, opts api.Options)
 	opts.RopeFrequencyBase = 0.0
 	opts.RopeFrequencyScale = 0.0
 	gpuInfo := gpu.GetGPUInfo()
-	return newLlmServer(gpuInfo.Library, model, adapters, projectors, ggml.NumLayers(), opts)
+	return newLlmServer(gpuInfo, model, adapters, projectors, ggml.NumLayers(), opts)
 }
 
 // Give any native cgo implementations an opportunity to initialize
@@ -81,16 +79,16 @@ func Init(workdir string) error {
 	return nativeInit(workdir)
 }
 
-func newLlmServer(library, model string, adapters, projectors []string, numLayers int64, opts api.Options) (extServer, error) {
-	if _, libPresent := AvailableShims[library]; libPresent && library != "default" {
-		srv, err := newDynamicShimExtServer(AvailableShims[library], model, adapters, projectors, numLayers, opts)
+func newLlmServer(gpuInfo gpu.GpuInfo, model string, adapters, projectors []string, numLayers int64, opts api.Options) (extServer, error) {
+	for _, shim := range getShims(gpuInfo) {
+		if shim == "default" {
+			break
+		}
+		srv, err := newDynamicShimExtServer(shim, model, adapters, projectors, numLayers, opts)
 		if err == nil {
 			return srv, nil
 		}
-		log.Printf("Failed to load dynamic library %s - falling back to CPU mode %s", library, err)
-		// TODO - update some state to indicate we were unable to load the GPU library for future "info" ux
+		log.Printf("Failed to load dynamic library %s  %s", shim, err)
 	}
-
 	return newDefaultExtServer(model, adapters, projectors, numLayers, opts)
-
 }

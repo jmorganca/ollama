@@ -96,6 +96,15 @@ func GetGPUInfo() GpuInfo {
 			C.free(unsafe.Pointer(memInfo.err))
 		} else {
 			resp.Library = "rocm"
+			var version C.rocm_version_resp_t
+			C.rocm_get_version(*gpuHandles.rocm, &version)
+			verString := C.GoString(version.str)
+			if version.status == 0 {
+				resp.Variant = "v" + verString
+			} else {
+				log.Printf("failed to look up ROCm version: %s", verString)
+			}
+			C.free(unsafe.Pointer(version.str))
 		}
 	}
 	if resp.Library == "" {

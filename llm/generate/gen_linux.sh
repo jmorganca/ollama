@@ -48,23 +48,31 @@ init_vars
 git_module_setup
 apply_patches
 
-#
-# CPU first for the default library
-#
-CMAKE_DEFS="${COMMON_CMAKE_DEFS} ${CMAKE_DEFS}"
-BUILD_DIR="${LLAMACPP_DIR}/build/linux/cpu"
+if [ -z "${OLLAMA_SKIP_CPU_GENERATE}" ]; then
+    #
+    # CPU first for the default library
+    #
+    CMAKE_DEFS="${COMMON_CMAKE_DEFS} ${CMAKE_DEFS}"
+    BUILD_DIR="${LLAMACPP_DIR}/build/linux/cpu"
 
-build
-install
+    build
+    install
 
-# Placeholder to keep go embed happy until we start building dynamic CPU lib variants
-touch ${BUILD_DIR}/lib/dummy.so
+    # Placeholder to keep go embed happy until we start building dynamic CPU lib variants
+    touch ${BUILD_DIR}/lib/dummy.so
+else
+    echo "Skipping CPU generation step as requested"
+fi
 
 if [ -d /usr/local/cuda/lib64/ ]; then
     echo "CUDA libraries detected - building dynamic CUDA library"
     init_vars
+    CUDA_MAJOR=$(ls /usr/local/cuda/lib64/libcudart.so.* | head -1 | cut -f3 -d. || true)
+    if [ -n "${CUDA_MAJOR}" ]; then
+        CUDA_VARIANT=_v${CUDA_MAJOR}
+    fi
     CMAKE_DEFS="-DLLAMA_CUBLAS=on ${COMMON_CMAKE_DEFS} ${CMAKE_DEFS}"
-    BUILD_DIR="${LLAMACPP_DIR}/build/linux/cuda"
+    BUILD_DIR="${LLAMACPP_DIR}/build/linux/cuda${CUDA_VARIANT}"
     CUDA_LIB_DIR=/usr/local/cuda/lib64
     build
     install
@@ -96,9 +104,12 @@ fi
 
 if [ -d "${ROCM_PATH}" ]; then
     echo "ROCm libraries detected - building dynamic ROCm library"
+    if [ -f ${ROCM_PATH}/lib/librocm_smi64.so.? ]; then
+        ROCM_VARIANT=_v$(ls ${ROCM_PATH}/lib/librocm_smi64.so.? | cut -f3 -d. || true)
+    fi
     init_vars
     CMAKE_DEFS="${COMMON_CMAKE_DEFS} ${CMAKE_DEFS} -DLLAMA_HIPBLAS=on -DCMAKE_C_COMPILER=$ROCM_PATH/llvm/bin/clang -DCMAKE_CXX_COMPILER=$ROCM_PATH/llvm/bin/clang++ -DAMDGPU_TARGETS=$(amdGPUs) -DGPU_TARGETS=$(amdGPUs)"
-    BUILD_DIR="${LLAMACPP_DIR}/build/linux/rocm"
+    BUILD_DIR="${LLAMACPP_DIR}/build/linux/rocm${ROCM_VARIANT}"
     build
     install
     gcc -fPIC -g -shared -o ${BUILD_DIR}/lib/libext_server.so \
