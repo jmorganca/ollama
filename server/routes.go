@@ -414,6 +414,8 @@ func PullModelHandler(c *gin.Context) {
 		return
 	}
 
+	req.Name = strings.ToLower(req.Name)
+
 	if req.Name == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "name is required"})
 		return
@@ -457,6 +459,7 @@ func PushModelHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	req.Name = strings.ToLower(req.Name)
 
 	if req.Name == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "name is required"})
@@ -502,6 +505,7 @@ func CreateModelHandler(c *gin.Context) {
 		return
 	}
 
+	req.Name = strings.ToLower(req.Name)
 	if req.Name == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "name is required"})
 		return
@@ -570,6 +574,8 @@ func DeleteModelHandler(c *gin.Context) {
 		return
 	}
 
+	req.Name = strings.ToLower(req.Name)
+
 	if req.Name == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "name is required"})
 		return
@@ -609,6 +615,8 @@ func ShowModelHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	req.Name = strings.ToLower(req.Name)
 
 	if req.Name == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "name is required"})
