@@ -172,6 +172,7 @@ func predict(ctx context.Context, llm extServer, predict PredictOpts, fn func(Pr
 		"temperature":       predict.Options.Temperature,
 		"top_k":             predict.Options.TopK,
 		"top_p":             predict.Options.TopP,
+		"min_p":             predict.Options.MinP,
 		"tfs_z":             predict.Options.TFSZ,
 		"typical_p":         predict.Options.TypicalP,
 		"repeat_last_n":     predict.Options.RepeatLastN,
