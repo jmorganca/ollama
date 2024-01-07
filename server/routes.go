@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -849,8 +850,48 @@ func NewServer() (*Server, error) {
 	}, nil
 }
 
+func configOrigins() []string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+
+	path := filepath.Join(home, ".ollama", "origins")
+
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDONLY, 0600)
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+
+	var origins []string
+	r := bufio.NewReader(f)
+	for {
+		line, err := r.ReadString('\n')
+		if err != nil && err != io.EOF {
+			// an EOF still means data may have been returned
+			// e.g. if the file has no terminating newline.
+			return nil
+		}
+		line = strings.TrimSpace(line)
+		if len(line) != 0 {
+			origins = append(origins, line)
+		}
+		if err == io.EOF {
+			break
+		}
+	}
+
+	return origins
+}
+
 func (s *Server) GenerateRoutes() http.Handler {
 	var origins []string
+
+	if o := configOrigins(); o != nil {
+		origins = o
+	}
+
 	if o := os.Getenv("OLLAMA_ORIGINS"); o != "" {
 		origins = strings.Split(o, ",")
 	}
