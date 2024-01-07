@@ -251,6 +251,8 @@ See the [API documentation](./docs/api.md) for all endpoints.
 ## Community Integrations
 
 ### Web & Desktop
+
+- [Chatbox](https://github.com/Bin-Huang/Chatbox)
 - [Bionic GPT](https://github.com/bionic-gpt/bionic-gpt)
 - [HTML UI](https://github.com/rtcfirefly/ollama-ui)
 - [Chatbot UI](https://github.com/ivanfioravanti/chatbot-ollama)
@@ -303,6 +305,7 @@ See the [API documentation](./docs/api.md) for all endpoints.
 
 ### Mobile
 
+- [Chatbox](https://github.com/Bin-Huang/Chatbox)
 - [Enchanted](https://github.com/AugustDev/enchanted)
 - [Maid](https://github.com/Mobile-Artificial-Intelligence/maid)
 
