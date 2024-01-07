@@ -117,6 +117,7 @@ func generateInteractive(cmd *cobra.Command, opts generateOptions) error {
 		fmt.Fprintln(os.Stderr, "  /set parameter num_predict <int>      Max number of tokens to predict")
 		fmt.Fprintln(os.Stderr, "  /set parameter top_k <int>            Pick from top k num of tokens")
 		fmt.Fprintln(os.Stderr, "  /set parameter top_p <float>          Pick token based on sum of probabilities")
+		fmt.Fprintln(os.Stderr, "  /set parameter min_p <float>          Pick token based on top token probability * min_p")
 		fmt.Fprintln(os.Stderr, "  /set parameter num_ctx <int>          Set the context size")
 		fmt.Fprintln(os.Stderr, "  /set parameter temperature <float>    Set creativity level")
 		fmt.Fprintln(os.Stderr, "  /set parameter repeat_penalty <float> How strongly to penalize repetitions")

@@ -91,6 +91,7 @@ type Options struct {
 	NumPredict       int      `json:"num_predict,omitempty"`
 	TopK             int      `json:"top_k,omitempty"`
 	TopP             float32  `json:"top_p,omitempty"`
+	MinP             float32  `json:"min_p,omitempty"`
 	TFSZ             float32  `json:"tfs_z,omitempty"`
 	TypicalP         float32  `json:"typical_p,omitempty"`
 	RepeatLastN      int      `json:"repeat_last_n,omitempty"`
