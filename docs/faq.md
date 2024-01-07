@@ -66,6 +66,16 @@ Refer to the section above for how to use environment variables on your platform
 
 If a different directory needs to be used, set the environment variable `OLLAMA_MODELS` to the chosen directory. Refer to the section above for how to use environment variables on your platform.
 
+## Can I use models I downloaded from Hugging Face in Ollama? 
+
+There are a lot of models available on Hugging Face. Many of them will work with Ollama, but not all of them yet. You can look for models that use the library **PyTorch**, then in the repo look at the `config.json` file. In there you should see an architecture. For now, we support models that use the following architectures: Llama, Mistral, Falcon, RW, and BigCode.
+
+## Can I use models I downloaded in Ollama in other applications?
+
+Yes, as long as those applications work with GGUF models. You can find the models in the directories listed above. Under `models`, there is a manifests directory. Follow that path down to find the model you want to use. There will be a file for the model and tag you intend to use. In that file, you will see a layer called: `application/vnd.ollama.image.model`.
+
+The next line will show a sha256 hash. That happens to also be the filename for the model weights file that you can find in `.ollama/models/blobs`. You can use that file in any application that supports gguf. But it is important not to move the file from this location otherwise Ollama won't be able to use it.
+
 ## Does Ollama send my prompts and answers back to Ollama.ai to use in any way?
 
 No, Ollama runs entirely locally, and conversation data will never leave your machine.
