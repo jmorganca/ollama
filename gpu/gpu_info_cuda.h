@@ -22,6 +22,7 @@ typedef struct cuda_handle {
   nvmlReturn_t (*getHandle)(unsigned int, nvmlDevice_t *);
   nvmlReturn_t (*getMemInfo)(nvmlDevice_t, nvmlMemory_t *);
   nvmlReturn_t (*getCount)(unsigned int *);
+  nvmlReturn_t (*getComputeCapability)(nvmlDevice_t, int* major, int* minor);
 } cuda_handle_t;
 
 typedef struct cuda_init_resp {
@@ -29,8 +30,15 @@ typedef struct cuda_init_resp {
   cuda_handle_t ch;
 } cuda_init_resp_t;
 
+typedef struct cuda_compute_capability {
+  char *err;
+  int major;
+  int minor;
+} cuda_compute_capability_t;
+
 void cuda_init(cuda_init_resp_t *resp);
 void cuda_check_vram(cuda_handle_t ch, mem_info_t *resp);
+void cuda_compute_capability(cuda_handle_t ch, cuda_compute_capability_t *cc);
 
 #endif  // __GPU_INFO_CUDA_H__
 #endif  // __APPLE__

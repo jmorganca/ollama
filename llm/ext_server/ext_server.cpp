@@ -12,6 +12,7 @@ void llama_server_init(ext_server_params *sparams, ext_server_resp_t *err) {
 #if SERVER_VERBOSE != 1
   log_disable();
 #endif
+  LOG_TEE("system info: %s", llama_print_system_info());
   assert(err != NULL && sparams != NULL);
   err->id = 0;
   err->msg[0] = '\0';

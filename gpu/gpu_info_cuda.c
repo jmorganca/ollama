@@ -21,7 +21,7 @@ const char *cuda_lib_paths[] = {
 };
 #endif
 
-#define CUDA_LOOKUP_SIZE 5
+#define CUDA_LOOKUP_SIZE 6
 
 void cuda_init(cuda_init_resp_t *resp) {
   nvmlReturn_t ret;
@@ -39,6 +39,7 @@ void cuda_init(cuda_init_resp_t *resp) {
       {"nvmlDeviceGetHandleByIndex", (void *)&resp->ch.getHandle},
       {"nvmlDeviceGetMemoryInfo", (void *)&resp->ch.getMemInfo},
       {"nvmlDeviceGetCount_v2", (void *)&resp->ch.getCount},
+      {"nvmlDeviceGetCudaComputeCapability", (void *)&resp->ch.getComputeCapability},
   };
 
   for (i = 0; cuda_lib_paths[i] != NULL && resp->ch.handle == NULL; i++) {
@@ -121,6 +122,55 @@ void cuda_check_vram(cuda_handle_t h, mem_info_t *resp) {
 
     resp->total += memInfo.total;
     resp->free += memInfo.free;
+  }
+}
+
+void cuda_compute_capability(cuda_handle_t h, cuda_compute_capability_t *resp) {
+  resp->err = NULL;
+  resp->major = 0;
+  resp->minor = 0;
+  nvmlDevice_t device;
+  int major = 0;
+  int minor = 0;
+  nvmlReturn_t ret;
+  const int buflen = 256;
+  char buf[buflen + 1];
+  int i;
+
+  if (h.handle == NULL) {
+    resp->err = strdup("nvml handle not initialized");
+    return;
+  }
+
+  unsigned int devices;
+  ret = (*h.getCount)(&devices);
+  if (ret != NVML_SUCCESS) {
+    snprintf(buf, buflen, "unable to get device count: %d", ret);
+    resp->err = strdup(buf);
+    return;
+  }
+
+  for (i = 0; i < devices; i++) {
+    ret = (*h.getHandle)(i, &device);
+    if (ret != NVML_SUCCESS) {
+      snprintf(buf, buflen, "unable to get device handle %d: %d", i, ret);
+      resp->err = strdup(buf);
+      return;
+    }
+
+    ret = (*h.getComputeCapability)(device, &major, &minor);
+    if (ret != NVML_SUCCESS) {
+      snprintf(buf, buflen, "device compute capability lookup failure %d: %d", i, ret);
+      resp->err = strdup(buf);
+      return;
+    }
+    // Report the lowest major.minor we detect as that limits our compatibility
+    if (resp->major == 0 || resp->major > major ) {
+      resp->major = major;
+      resp->minor = minor;
+    } else if ( resp->major == major && resp->minor > minor ) {
+      resp->minor = minor;
+    }
   }
 }
 #endif  // __APPLE__
