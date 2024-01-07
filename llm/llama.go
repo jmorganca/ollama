@@ -114,7 +114,7 @@ type ImageData struct {
 }
 
 var (
-	errNvidiaSMI     = errors.New("warning: gpu support may not be enabled, check that you have installed GPU drivers: nvidia-smi command failed")
+	errNvidiaSMI     = errors.New("warning: GPU support may not be enabled, check that you have installed GPU drivers: nvidia-smi command failed, running on CPU only")
 	errAvailableVRAM = errors.New("not enough VRAM available, falling back to CPU only")
 	payloadMissing   = fmt.Errorf("expected dynamic library payloads not included in this build of ollama")
 )

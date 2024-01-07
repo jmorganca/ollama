@@ -216,6 +216,10 @@ Next, start the server:
 ./ollama serve
 ```
 
+**Note for Non-NVIDIA GPU Users:**
+
+If you encounter a warning about GPU support when running `ollama serve`, disregard the warning and let the command continue running. Ollama will default to using only the CPU.
+
 Finally, in a separate shell, run a model:
 
 ```
