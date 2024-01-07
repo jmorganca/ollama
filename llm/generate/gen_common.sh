@@ -51,6 +51,13 @@ install() {
     cp ${BUILD_DIR}/libggml_static.a ${BUILD_DIR}/lib
 }
 
+install_shared() {
+    rm -rf ${BUILD_DIR}/lib
+    mkdir -p ${BUILD_DIR}/lib
+    cp ${BUILD_DIR}/examples/server/libext_server_shared.so ${BUILD_DIR}/lib
+    cp ${BUILD_DIR}/common/libcommon.a ${BUILD_DIR}/lib
+}
+
 # Keep the local tree clean after we're done with the build
 cleanup() {
     (cd ${LLAMACPP_DIR}/examples/server/ && git checkout CMakeLists.txt server.cpp)

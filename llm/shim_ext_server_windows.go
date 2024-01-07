@@ -29,8 +29,3 @@ func updatePath(dir string) {
 	log.Printf("Updating PATH to %s", newPath)
 	os.Setenv("PATH", newPath)
 }
-
-func verifyDriverAccess() error {
-	// TODO if applicable
-	return nil
-}

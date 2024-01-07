@@ -48,23 +48,70 @@ init_vars
 git_module_setup
 apply_patches
 
-#
-# CPU first for the default library
-#
-CMAKE_DEFS="${COMMON_CMAKE_DEFS} ${CMAKE_DEFS}"
-BUILD_DIR="${LLAMACPP_DIR}/build/linux/cpu"
+if [ -z "${OLLAMA_SKIP_CPU_GENERATE}" ]; then
+    # -DLLAMA_AVX -- 2011 Intel Sandy Bridge & AMD Bulldozer
+    # -DLLAMA_AVX2 -- 2013 Intel Haswell & 2015 AMD Excavator / 2017 AMD Zen
+    # -DLLAMA_AVX512 -- 2017 Intel Skylake and High End DeskTop (HEDT)
+    # -DLLAMA_AVX512_VBMI -- 2018 Intel Cannon Lake
+    # -DLLAMA_AVX512_VNNI -- 2021 Intel Alder Lake
+    # -DLLAMA_FMA (FMA3) -- 2013 Intel Haswell & 2012 AMD Piledriver
+    # -DLLAMA_F16C -- 2012 Intel Ivy Bridge & AMD 2011 Bulldozer
+    # Rosetta does NOT support AVX, AVX2, AVX512
 
-build
-install
+    COMMON_CPU_DEFS="-DCMAKE_POSITION_INDEPENDENT_CODE=on -DLLAMA_NATIVE=off"
+    #
+    # CPU first for the default library, set up as lowest common denominator for maximum compatibility
+    #
+    CMAKE_DEFS="${COMMON_CPU_DEFS} -DLLAMA_AVX=off -DLLAMA_AVX2=off -DLLAMA_AVX512=off -DLLAMA_FMA=off -DLLAMA_F16C=off ${CMAKE_DEFS}"
+    BUILD_DIR="${LLAMACPP_DIR}/build/linux/cpu"
+    echo "Building LCD CPU"
+    build
+    install
 
-# Placeholder to keep go embed happy until we start building dynamic CPU lib variants
-touch ${BUILD_DIR}/lib/dummy.so
+    #
+    # ~2011 CPU Dynamic library with more capabilities turned on to optimize performance
+    #
+    init_vars
+    CMAKE_DEFS="${COMMON_CPU_DEFS} -DBUILD_SHARED_LIBS=on -DLLAMA_AVX=on -DLLAMA_AVX2=off -DLLAMA_AVX512=off -DLLAMA_FMA=off -DLLAMA_F16C=off ${CMAKE_DEFS}"
+    BUILD_DIR="${LLAMACPP_DIR}/build/linux/cpu_avx"
+    CMAKE_TARGETS="${CMAKE_TARGETS} --target ext_server_shared"
+    echo "Building AVX CPU"
+    build
+    install_shared
+    #
+    # ~2013 CPU Dynamic library
+    #
+    init_vars
+    CMAKE_DEFS="${COMMON_CPU_DEFS} -DBUILD_SHARED_LIBS=on -DLLAMA_AVX=on -DLLAMA_AVX2=on -DLLAMA_AVX512=off -DLLAMA_FMA=on -DLLAMA_F16C=on ${CMAKE_DEFS}"
+    BUILD_DIR="${LLAMACPP_DIR}/build/linux/cpu_avx2"
+    CMAKE_TARGETS="${CMAKE_TARGETS} --target ext_server_shared"
+    echo "Building AVX2 CPU"
+    build
+    install_shared
+
+    #
+    # ~2017 CPU Dynamic library (best perf)
+    #
+    init_vars
+    CMAKE_DEFS="${COMMON_CPU_DEFS} -DBUILD_SHARED_LIBS=on -DLLAMA_AVX=on -DLLAMA_AVX2=on -DLLAMA_AVX512=on -DLLAMA_FMA=on -DLLAMA_F16C=on ${CMAKE_DEFS}"
+    BUILD_DIR="${LLAMACPP_DIR}/build/linux/cpu_avx512"
+    CMAKE_TARGETS="${CMAKE_TARGETS} --target ext_server_shared"
+    echo "Building AVX512 CPU"
+    build
+    install_shared
+else
+    echo "Skipping CPU generation step as requested"
+fi
 
 if [ -d /usr/local/cuda/lib64/ ]; then
     echo "CUDA libraries detected - building dynamic CUDA library"
     init_vars
+    CUDA_MAJOR=$(ls /usr/local/cuda/lib64/libcudart.so.* | head -1 | cut -f3 -d. || true)
+    if [ -n "${CUDA_MAJOR}" ]; then
+        CUDA_VARIANT=_v${CUDA_MAJOR}
+    fi
     CMAKE_DEFS="-DLLAMA_CUBLAS=on ${COMMON_CMAKE_DEFS} ${CMAKE_DEFS}"
-    BUILD_DIR="${LLAMACPP_DIR}/build/linux/cuda"
+    BUILD_DIR="${LLAMACPP_DIR}/build/linux/cuda${CUDA_VARIANT}"
     CUDA_LIB_DIR=/usr/local/cuda/lib64
     build
     install
@@ -96,9 +143,12 @@ fi
 
 if [ -d "${ROCM_PATH}" ]; then
     echo "ROCm libraries detected - building dynamic ROCm library"
+    if [ -f ${ROCM_PATH}/lib/librocm_smi64.so.? ]; then
+        ROCM_VARIANT=_v$(ls ${ROCM_PATH}/lib/librocm_smi64.so.? | cut -f3 -d. || true)
+    fi
     init_vars
     CMAKE_DEFS="${COMMON_CMAKE_DEFS} ${CMAKE_DEFS} -DLLAMA_HIPBLAS=on -DCMAKE_C_COMPILER=$ROCM_PATH/llvm/bin/clang -DCMAKE_CXX_COMPILER=$ROCM_PATH/llvm/bin/clang++ -DAMDGPU_TARGETS=$(amdGPUs) -DGPU_TARGETS=$(amdGPUs)"
-    BUILD_DIR="${LLAMACPP_DIR}/build/linux/rocm"
+    BUILD_DIR="${LLAMACPP_DIR}/build/linux/rocm${ROCM_VARIANT}"
     build
     install
     gcc -fPIC -g -shared -o ${BUILD_DIR}/lib/libext_server.so \
