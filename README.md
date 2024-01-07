@@ -284,6 +284,7 @@ See the [API documentation](./docs/api.md) for all endpoints.
 ### Package managers
 
 - [Pacman](https://archlinux.org/packages/extra/x86_64/ollama/)
+- [Helm Chart](https://artifacthub.io/packages/helm/ollama-helm/ollama)
 
 ### Libraries
 
