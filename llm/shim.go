@@ -50,16 +50,20 @@ func getShims(gpuInfo gpu.GpuInfo) []string {
 	}
 
 	// Load up the CPU alternates if not primary requested
+	// and we haven't down-selected to default due to missing CPU features
 	if gpuInfo.Library != "cpu" {
-		altShims = []string{}
-		for cmp := range availableShims {
-			if strings.Split(cmp, "_")[0] == "cpu" {
-				altShims = append(altShims, cmp)
+		variant := gpu.GetCPUVariant()
+		// If no variant, then we fall back to default
+		// If we have a variant, try that if we find an exact match
+		// Attempting to run the wrong CPU instructions will panic the
+		// process
+		if variant != "" {
+			for cmp := range availableShims {
+				if cmp == "cpu_"+variant {
+					shims = append(shims, cmp)
+					break
+				}
 			}
-		}
-		slices.Sort(altShims)
-		for _, altShim := range altShims {
-			shims = append(shims, availableShims[altShim])
 		}
 	}
 	// default is always last as the lowest common denominator
