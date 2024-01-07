@@ -6,6 +6,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -615,6 +616,7 @@ func generate(cmd *cobra.Command, opts generateOptions) error {
 
 func RunServer(cmd *cobra.Command, _ []string) error {
 	host, port, err := net.SplitHostPort(os.Getenv("OLLAMA_HOST"))
+
 	if err != nil {
 		host, port = "127.0.0.1", "11434"
 		if ip := net.ParseIP(strings.Trim(os.Getenv("OLLAMA_HOST"), "[]")); ip != nil {
@@ -626,9 +628,34 @@ func RunServer(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	ln, err := net.Listen("tcp", net.JoinHostPort(host, port))
-	if err != nil {
-		return err
+	certFile := filepath.Join(os.Getenv("HOME"), ".ollama/ssl/cert.pem")
+	keyFile := filepath.Join(os.Getenv("HOME"), ".ollama/ssl/key.pem")
+
+	var ln net.Listener
+
+	if _, certErr := os.Stat(certFile); certErr == nil {
+		if _, keyErr := os.Stat(keyFile); keyErr == nil {
+			cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+
+			if err != nil {
+				return err
+			}
+
+			ln, err = tls.Listen("tcp", net.JoinHostPort(host, port), &tls.Config{
+				Certificates: []tls.Certificate{cert},
+			})
+
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if ln == nil {
+		ln, err = net.Listen("tcp", net.JoinHostPort(host, port))
+		if err != nil {
+			return err
+		}
 	}
 
 	return server.Serve(ln)

@@ -248,6 +248,27 @@ curl http://localhost:11434/api/chat -d '{
 
 See the [API documentation](./docs/api.md) for all endpoints.
 
+## SSL Support
+
+Ollama now supports SSL, allowing you to run your server securely using HTTPS.
+
+### Configuring SSL
+
+1. Obtain an SSL certificate and a private key. You can acquire these from a Certificate Authority (CA) or generate a self-signed certificate (not recommended for production use).
+   
+2. Place the certificate and key files in the `~/.ollama/ssl/` directory on your server.
+
+3. Ensure the files are named `cert.pem` and `key.pem`, respectively.
+
+4. Restart the Ollama server. It will automatically detect the presence of these files and enable HTTPS.
+
+### Running Without SSL
+
+If you prefer to run Ollama without SSL or are setting it up for a local, secure environment, simply do not place the SSL files in the `~/.ollama/ssl/` directory. The server will operate over standard HTTP in this case.
+
+> Note: While SSL provides enhanced security, especially for data in transit, ensure you follow best practices for securing your server and managing SSL certificates.
+
+
 ## Community Integrations
 
 ### Web & Desktop
