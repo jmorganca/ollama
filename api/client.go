@@ -20,8 +20,9 @@ import (
 )
 
 type Client struct {
-	base *url.URL
-	http http.Client
+	base   *url.URL
+	http   http.Client
+	Header http.Header
 }
 
 func checkError(resp *http.Response, body []byte) error {
@@ -71,7 +72,10 @@ func ClientFromEnvironment() (*Client, error) {
 			Scheme: scheme,
 			Host:   net.JoinHostPort(host, port),
 		},
+		Header: make(http.Header),
 	}
+
+	client.Header.Set("User-Agent", fmt.Sprintf("ollama/%s (%s %s) Go/%s", version.Version, runtime.GOARCH, runtime.GOOS, runtime.Version()))
 
 	mockRequest, err := http.NewRequest(http.MethodHead, client.base.String(), nil)
 	if err != nil {
@@ -118,9 +122,12 @@ func (c *Client) do(ctx context.Context, method, path string, reqData, respData 
 		return err
 	}
 
+	for k, v := range c.Header {
+		request.Header[k] = v
+	}
+
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Accept", "application/json")
-	request.Header.Set("User-Agent", fmt.Sprintf("ollama/%s (%s %s) Go/%s", version.Version, runtime.GOARCH, runtime.GOOS, runtime.Version()))
 
 	respObj, err := c.http.Do(request)
 	if err != nil {
@@ -164,9 +171,12 @@ func (c *Client) stream(ctx context.Context, method, path string, data any, fn f
 		return err
 	}
 
+	for k, v := range c.Header {
+		request.Header[k] = v
+	}
+
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Accept", "application/x-ndjson")
-	request.Header.Set("User-Agent", fmt.Sprintf("ollama/%s (%s %s) Go/%s", version.Version, runtime.GOARCH, runtime.GOOS, runtime.Version()))
 
 	response, err := c.http.Do(request)
 	if err != nil {
