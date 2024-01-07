@@ -77,6 +77,17 @@ install_success() {
 }
 trap install_success EXIT
 
+ask_to_activate_service() {
+    while true; do
+        read -p "Do you want to activate the Ollama service? [Y/n]: " yn
+        case $yn in
+            [Yy]* ) return 0;;
+            [Nn]* ) return 1;;
+            * ) echo "Please answer y or n.";;
+        esac
+    done
+}
+
 # Everything from this point onwards is optional.
 
 configure_systemd() {
@@ -122,8 +133,12 @@ EOF
     esac
 }
 
-if available systemctl; then
-    configure_systemd
+if ask_to_activate_service; then
+    if available systemctl; then
+        configure_systemd
+    fi
+else
+    status "Service activation skipped by user."
 fi
 
 if ! available lspci && ! available lshw; then
