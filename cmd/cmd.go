@@ -22,6 +22,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
@@ -258,6 +259,73 @@ func ListHandler(cmd *cobra.Command, args []string) error {
 	table.SetBorder(false)
 	table.SetNoWhiteSpace(true)
 	table.SetTablePadding("\t")
+	table.AppendBulk(data)
+	table.Render()
+
+	return nil
+}
+
+func ListRemoteHandler(cmd *cobra.Command, args []string) error {
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+	}
+	url := "https://ollama.ai/library"
+
+	resp, err := client.Get(url)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status: %s", resp.Status)
+	}
+
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	if err != nil {
+		return err
+	}
+	var data [][]string
+	doc.Find("#repo ul li").Each(func(i int, s *goquery.Selection) {
+		nameSelection := s.Find("h2")
+		if nameSelection.Length() == 0 {
+			err = fmt.Errorf("error parsing HTML: expected element not found")
+			return
+		}
+		name := strings.TrimSpace(nameSelection.Text())
+
+		idSelection := s.Find("a")
+		if idSelection.Length() == 0 {
+			err = fmt.Errorf("error parsing HTML: expected a element not found")
+			return
+		}
+		id := strings.TrimSpace(strings.TrimPrefix(idSelection.AttrOr("href", ""), "/library/"))
+
+		pullsSelection := s.Find("span.flex.items-center").First()
+		if pullsSelection.Length() == 0 {
+			err = fmt.Errorf("error parsing HTML: expected span element not found")
+			return
+		}
+		pulls := strings.TrimSpace(pullsSelection.Text())
+
+		modifiedSelection := s.Find("span.flex.items-center").Last()
+		if modifiedSelection.Length() == 0 {
+			err = fmt.Errorf("error parsing HTML: expected span element not found")
+			return
+		}
+		modified := strings.TrimSpace(modifiedSelection.Text())
+
+		data = append(data, []string{name, id, pulls, modified})
+	})
+
+	if err != nil {
+		return err
+	}
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"NAME", "ID", "PULLS", "MODIFIED"})
+	table.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_RIGHT, tablewriter.ALIGN_RIGHT, tablewriter.ALIGN_RIGHT})
 	table.AppendBulk(data)
 	table.Render()
 
@@ -851,6 +919,14 @@ func NewCLI() *cobra.Command {
 		RunE:    ListHandler,
 	}
 
+	listRemoteCmd := &cobra.Command{
+		Use:     "list-remote",
+		Aliases: []string{"lsr"},
+		Short:   "List remote models",
+		PreRunE: checkServerHeartbeat,
+		RunE:    ListRemoteHandler,
+	}
+
 	copyCmd := &cobra.Command{
 		Use:     "cp SOURCE TARGET",
 		Short:   "Copy a model",
@@ -875,6 +951,7 @@ func NewCLI() *cobra.Command {
 		pullCmd,
 		pushCmd,
 		listCmd,
+		listRemoteCmd,
 		copyCmd,
 		deleteCmd,
 	)
