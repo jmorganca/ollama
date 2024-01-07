@@ -7,10 +7,10 @@ from mattsollamatools import chunker
 
 if __name__ == "__main__":
     chosen_topic = curses.wrapper(menu)
-    print("Here is your news summary:\n")
     urls = getUrls(chosen_topic, n=5)
     model = SentenceTransformer('all-MiniLM-L6-v2')
     allEmbeddings = []
+    failed = False
 
     for url in urls:
       article={}
@@ -18,6 +18,11 @@ if __name__ == "__main__":
       article['url'] = url
       text = getArticleText(url)
       summary = get_summary(text)
+      if summary is None:
+        failed = True
+        print(f"Failed to get summary for {url}")
+        break  # Exit the loop if we failed to get a summary
+
       chunks = chunker(text)  # Use the chunk_text function from web_utils
       embeddings = model.encode(chunks)
       for (chunk, embedding) in zip(chunks, embeddings):
@@ -31,7 +36,11 @@ if __name__ == "__main__":
 
       print(f"{summary}\n")
 
-    
+    if failed:
+       exit(1)
+
+    print("Here is your news summary:\n")
+
     while True:
       context = []
       # Input a question from the user

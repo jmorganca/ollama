@@ -86,10 +86,26 @@ def get_summary(text):
   }
   payload_json = json.dumps(payload)
   headers = {"Content-Type": "application/json"}
-  response = requests.post(url, data=payload_json, headers=headers)
 
-  return json.loads(response.text)["response"]
+  try:
+    response = requests.post(url, data=payload_json, headers=headers)
+    response_data = json.loads(response.text)
 
+    # Check if the response contains an error key
+    if 'error' in response_data:
+      print(f"Error occurred: {response_data['error']}")
+      return None
+    return response_data["response"]
+  except requests.RequestException as e:
+      print(f"Request error: {e}")
+      return None  # or some other appropriate action
+  except json.JSONDecodeError as e:
+      print(f"JSON decode error: {e}")
+      return None  # or some other appropriate action
+  except Exception as e:
+      print(f"An unexpected error occurred: {e}")
+      return None  # or some other appropriate action
+  
 # Perform K-nearest neighbors (KNN) search
 def knn_search(question_embedding, embeddings, k=5):
     X = np.array([item['embedding'] for article in embeddings for item in article['embeddings']])
