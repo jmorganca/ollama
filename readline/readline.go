@@ -16,6 +16,20 @@ type Prompt struct {
 	UseAlt         bool
 }
 
+func (p *Prompt) prompt() string {
+	if p.UseAlt {
+		return p.AltPrompt
+	}
+	return p.Prompt
+}
+
+func (p *Prompt) placeholder() string {
+	if p.UseAlt {
+		return p.AltPlaceholder
+	}
+	return p.Placeholder
+}
+
 type Terminal struct {
 	outchan chan rune
 }
@@ -46,8 +60,9 @@ func New(prompt Prompt) (*Instance, error) {
 }
 
 func (i *Instance) Readline() (string, error) {
-	prompt := i.Prompt.Prompt
-	if i.Prompt.UseAlt || i.Pasting {
+	prompt := i.Prompt.prompt()
+	if i.Pasting {
+		// force alt prompt when pasting
 		prompt = i.Prompt.AltPrompt
 	}
 	fmt.Print(prompt)
@@ -71,10 +86,7 @@ func (i *Instance) Readline() (string, error) {
 		// don't show placeholder when pasting unless we're in multiline mode
 		showPlaceholder := !i.Pasting || i.Prompt.UseAlt
 		if buf.IsEmpty() && showPlaceholder {
-			ph := i.Prompt.Placeholder
-			if i.Prompt.UseAlt {
-				ph = i.Prompt.AltPlaceholder
-			}
+			ph := i.Prompt.placeholder()
 			fmt.Printf(ColorGrey + ph + fmt.Sprintf(CursorLeftN, len(ph)) + ColorDefault)
 		}
 
