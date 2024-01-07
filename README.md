@@ -320,3 +320,4 @@ See the [API documentation](./docs/api.md) for all endpoints.
 - [Rivet plugin](https://github.com/abrenneke/rivet-plugin-ollama)
 - [Llama Coder](https://github.com/ex3ndr/llama-coder) (Copilot alternative using Ollama)
 - [Obsidian BMO Chatbot plugin](https://github.com/longy2k/obsidian-bmo-chatbot)
+- [Obsidian Local GPT plugin](https://github.com/pfrankov/obsidian-local-gpt)
