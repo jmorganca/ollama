@@ -1,0 +1,15 @@
+---
+version: "3.8"
+
+services:
+  ollama:
+    build: .
+    container_name: ollama
+    image: ollama/ollama
+    healthcheck:
+      test: ollama --version || exit 1
+      interval: 1s
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama:/root/.ollama
