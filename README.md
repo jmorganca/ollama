@@ -15,6 +15,14 @@ Get up and running with large language models locally.
 
 [Download](https://ollama.ai/download/Ollama-darwin.zip)
 
+### Homebrew
+
+If you are a [Homebrew](https://brew.sh/) user, you can install [ollama](https://formulae.brew.sh/formula/ollama) with:
+
+```
+$ brew install ollama
+```
+
 ### Windows
 
 Coming soon! For now, you can install Ollama on Windows via WSL2.
