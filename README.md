@@ -300,6 +300,7 @@ See the [API documentation](./docs/api.md) for all endpoints.
 - [Ollama for Dart](https://github.com/breitburg/dart-ollama)
 - [Ollama for Laravel](https://github.com/cloudstudio/ollama-laravel)
 - [LangChainDart](https://github.com/davidmigloz/langchain_dart)
+- [Haystack LLM framework](https://haystack.deepset.ai/integrations/ollama)
 
 ### Mobile
 
