@@ -1,0 +1,20 @@
+{
+  "name": "typescript-selfqueryingretreival",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@xenova/transformers": "^2.7.0",
+    "chromadb": "^1.5.11",
+    "langchain": "^0.0.177",
+    "ollama-node": "^0.1.24",
+    "peggy": "^3.0.2",
+    "sharp": "^0.32.6"
+  }
+}
