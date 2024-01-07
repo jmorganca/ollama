@@ -98,7 +98,7 @@ func (b *blobDownload) Prepare(ctx context.Context, requestURL *url.URL, opts *R
 
 		b.Total, _ = strconv.ParseInt(resp.Header.Get("Content-Length"), 10, 64)
 
-		var size = b.Total / numDownloadParts
+		size := b.Total / numDownloadParts
 		switch {
 		case size < minDownloadPartSize:
 			size = minDownloadPartSize
@@ -132,13 +132,13 @@ func (b *blobDownload) run(ctx context.Context, requestURL *url.URL, opts *Regis
 	defer blobDownloadManager.Delete(b.Digest)
 	ctx, b.CancelFunc = context.WithCancel(ctx)
 
-	file, err := os.OpenFile(b.Name+"-partial", os.O_CREATE|os.O_RDWR, 0644)
+	file, err := os.OpenFile(b.Name+"-partial", os.O_CREATE|os.O_RDWR, 0o644)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	file.Truncate(b.Total)
+	_ = file.Truncate(b.Total)
 
 	g, inner := errgroup.WithContext(ctx)
 	g.SetLimit(numDownloadParts)
@@ -246,7 +246,7 @@ func (b *blobDownload) readPart(partName string) (*blobDownloadPart, error) {
 }
 
 func (b *blobDownload) writePart(partName string, part *blobDownloadPart) error {
-	partFile, err := os.OpenFile(partName, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
+	partFile, err := os.OpenFile(partName, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0o644)
 	if err != nil {
 		return err
 	}
@@ -340,6 +340,7 @@ func downloadBlob(ctx context.Context, opts downloadOpts) error {
 			return err
 		}
 
+		// nolint: contextcheck
 		go download.Run(context.Background(), requestURL, opts.regOpts)
 	}
 

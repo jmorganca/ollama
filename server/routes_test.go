@@ -193,13 +193,12 @@ func Test_Routes(t *testing.T) {
 		}
 
 		resp, err := httpSrv.Client().Do(req)
-		defer resp.Body.Close()
 		assert.Nil(t, err)
+		defer resp.Body.Close()
 
 		if tc.Expected != nil {
 			tc.Expected(t, resp)
 		}
 
 	}
-
 }

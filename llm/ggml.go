@@ -94,9 +94,9 @@ func (c *containerLORA) Name() string {
 	return "ggla"
 }
 
-func (c *containerLORA) Decode(ro *readSeekOffset) (model, error) {
+func (c *containerLORA) Decode(rso *readSeekOffset) (model, error) {
 	var version uint32
-	binary.Read(ro, binary.LittleEndian, &version)
+	binary.Read(rso, binary.LittleEndian, &version)
 
 	switch version {
 	case 1:
@@ -107,7 +107,7 @@ func (c *containerLORA) Decode(ro *readSeekOffset) (model, error) {
 	c.version = version
 
 	// remaining file contents aren't decoded
-	ro.Seek(0, io.SeekEnd)
+	rso.Seek(0, io.SeekEnd)
 
 	return nil, nil
 }

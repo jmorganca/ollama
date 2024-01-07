@@ -88,7 +88,7 @@ func (b *blobUpload) Prepare(ctx context.Context, requestURL *url.URL, opts *Reg
 		return nil
 	}
 
-	var size = b.Total / numUploadParts
+	size := b.Total / numUploadParts
 	switch {
 	case size < minUploadPartSize:
 		size = minUploadPartSize
@@ -395,6 +395,7 @@ func uploadBlob(ctx context.Context, mp ModelPath, layer *Layer, opts *RegistryO
 			return err
 		}
 
+		// nolint: contextcheck
 		go upload.Run(context.Background(), opts)
 	}
 

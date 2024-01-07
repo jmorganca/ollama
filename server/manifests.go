@@ -26,9 +26,9 @@ func WriteManifest(name string, config *Layer, layers []*Layer) error {
 		return err
 	}
 
-	if err := os.MkdirAll(filepath.Dir(manifestPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(manifestPath), 0o755); err != nil {
 		return err
 	}
 
-	return os.WriteFile(manifestPath, b.Bytes(), 0644)
+	return os.WriteFile(manifestPath, b.Bytes(), 0o644)
 }

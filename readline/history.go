@@ -23,7 +23,7 @@ type History struct {
 func NewHistory() (*History, error) {
 	h := &History{
 		Buf:      arraylist.New(),
-		Limit:    100, //resizeme
+		Limit:    100, // resizeme
 		Autosave: true,
 		Enabled:  true,
 	}
@@ -49,7 +49,7 @@ func (h *History) Init() error {
 
 	h.Filename = path
 
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDONLY, 0600)
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDONLY, 0o600)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil
@@ -84,7 +84,7 @@ func (h *History) Add(l []rune) {
 	h.Compact()
 	h.Pos = h.Size()
 	if h.Autosave {
-		h.Save()
+		_ = h.Save()
 	}
 }
 
@@ -132,7 +132,7 @@ func (h *History) Save() error {
 
 	tmpFile := h.Filename + ".tmp"
 
-	f, err := os.OpenFile(tmpFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC|os.O_APPEND, 0666)
+	f, err := os.OpenFile(tmpFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC|os.O_APPEND, 0o600)
 	if err != nil {
 		return err
 	}

@@ -57,6 +57,7 @@ func (i *Instance) Readline() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	// nolint: errcheck
 	defer UnsetRawMode(fd, termios)
 
 	buf, _ := NewBuffer(i.Prompt)

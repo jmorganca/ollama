@@ -1,0 +1,78 @@
+name: test
+
+on:
+  pull_request:
+
+jobs:
+  generate:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+          cache: true
+      - if: ${{ startsWith(matrix.os, 'windows-') }}
+        shell: pwsh
+        run: |
+          $path = vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if ($path) {
+              $path = join-path $path 'Common7\Tools\vsdevcmd.bat'
+              if (test-path $path) {
+                  cmd /s /c """$path"" $args && set" | where { $_ -match '(\w+)=(.*)' } | foreach {
+                      echo "$($Matches[1])=$($Matches[2])" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+                  }
+              }
+          }
+
+          echo "C:\Program Files\Git\usr\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
+      - run: go get ./...
+      - run: go generate -x ./...
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os }}-libraries
+          path: |
+            llm/llama.cpp/build/**/lib/*
+  lint:
+    needs: generate
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+          cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.os }}-libraries
+          path: llm/llama.cpp/build
+      - uses: golangci/golangci-lint-action@v3
+  test:
+    needs: generate
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+          cache: true
+      - run: go get
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.os }}-libraries
+          path: llm/llama.cpp/build
+      - run: go build
+      - run: go test -v ./...
