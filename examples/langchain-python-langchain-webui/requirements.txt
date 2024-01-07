@@ -1,0 +1,10 @@
+langchain==0.0.313
+pypdf==3.16.4
+chromadb==0.4.14
+tiktoken==0.5.1
+docx2txt==0.8
+unstructured==0.10.25
+gradio==3.50.2
+Pillow==10.1.0
+matplotlib==3.8.0
+numpy==1.23.5
