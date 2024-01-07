@@ -8,6 +8,12 @@ To upgrade Ollama, run the installation process again. On the Mac, click the Oll
 
 Review the [Troubleshooting](./troubleshooting.md) docs for more about using logs.
 
+## What are the components of Ollama that need to be running to work with the CLI, the API, and 3rd party tools?
+
+At the heart of Ollama there are two main components: the server and the client. Even if everything is running on a single machine, there is a server that is running as a service, or background process, and there is some sort of client. Often that is the CLI. For instance, `ollama run llama2` is the command to start the CLI. You will often see this referred to as the REPL, a tool where you can interactively work with Ollama. You can run the server using the command `ollama serve`, but we recommend letting the service run instead. The Ollama installer script for Linux will add a systemd service to your machine that runs `ollama serve` as the user, `ollama`. On macOS, running `ollama` will start the Ollama Menu Bar app which is running the service.
+
+The Ollama service is what actually loads the model and processes your requests. It also serves the API that all clients use, including our REPL and any 3rd party tools. There are some tools that require adding some environment variables to make the service more accessible in different ways. You can learn more about configuring those below.
+
 ## How do I use Ollama server environment variables on Mac
 
 On macOS, Ollama runs in the background and is managed by the menubar app. If adding environment variables, Ollama will need to be run manually.
