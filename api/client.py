@@ -258,7 +258,7 @@ def delete(model_name):
         print(f"An error occurred: {e}")
         return None
 
-# Show info about a model.
+# Shows info about a model.
 def show(model_name):
     try:
         url = f"{BASE_URL}/api/show"
@@ -273,6 +273,7 @@ def show(model_name):
         print(f"An error occurred: {e}")
         return None
 
+# Checks whether the model is running.
 def heartbeat():
     try:
         url = f"{BASE_URL}/"
