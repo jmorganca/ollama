@@ -1,0 +1,456 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "ollama API",
+    "description": "API for interacting with ollama models",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/generate": {
+      "post": {
+        "summary": "Generate a completion",
+        "description": "Generate a response for a given prompt with a provided model. This is a streaming endpoint.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "model": {
+                    "type": "string",
+                    "description": "The model name (required)"
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "description": "The prompt to generate a response for"
+                  },
+                  "options": {
+                    "type": "object",
+                    "description": "Additional model parameters"
+                  },
+                  "system": {
+                    "type": "string",
+                    "description": "System prompt to override the model's definition"
+                  },
+                  "template": {
+                    "type": "string",
+                    "description": "The full prompt or prompt template to override the model's definition"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A stream of JSON objects",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "model": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "response": {
+                      "type": "string"
+                    },
+                    "done": {
+                      "type": "boolean"
+                    },
+                    "total_duration": {
+                      "type": "integer"
+                    },
+                    "load_duration": {
+                      "type": "integer"
+                    },
+                    "sample_count": {
+                      "type": "integer"
+                    },
+                    "sample_duration": {
+                      "type": "integer"
+                    },
+                    "prompt_eval_count": {
+                      "type": "integer"
+                    },
+                    "prompt_eval_duration": {
+                      "type": "integer"
+                    },
+                    "eval_count": {
+                      "type": "integer"
+                    },
+                    "eval_duration": {
+                      "type": "integer"
+                    },
+                    "context": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
+    },
+    "/api/create": {
+      "post": {
+        "summary": "Create a Model",
+        "description": "Create a model from a Modelfile",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the model to create (required)"
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "Path to the Modelfile"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A stream of JSON objects with status \"success\"",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tags": {
+      "get": {
+        "summary": "List Local Models",
+        "description": "List models that are available locally",
+        "responses": {
+          "200": {
+            "description": "List of local models",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "models": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "modified_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "size": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/show": {
+      "post": {
+        "summary": "Show Model Information",
+        "description": "Show details about a model including modelfile, template, parameters, license, and system prompt",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the model to show"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Model information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "license": {
+                      "type": "string"
+                    },
+                    "modelfile": {
+                      "type": "string"
+                    },
+                    "parameters": {
+                      "type": "string"
+                    },
+                    "template": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/copy": {
+      "post": {
+        "summary": "Copy a Model",
+        "description": "Copy a model. Creates a model with another name from an existing model",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "source": {
+                    "type": "string",
+                    "description": "The source model name (required)"
+                  },
+                  "destination": {
+                    "type": "string",
+                    "description": "The destination model name (required)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A stream of JSON objects with status \"success\"",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/delete": {
+      "delete": {
+        "summary": "Delete a Model",
+        "description": "Delete a model and its data",
+        "parameters": [
+          {
+            "name": "model",
+            "in": "query",
+            "description": "Name of the model to delete (required)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A stream of JSON objects with status \"success\"",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pull": {
+      "post": {
+        "summary": "Pull a Model",
+        "description": "Download a model from the ollama library",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the model to pull (required)"
+                  },
+                  "insecure": {
+                    "type": "boolean",
+                    "description": "Allow insecure connections to the library"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Download status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "digest": {
+                      "type": "string"
+                    },
+                    "total": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/push": {
+      "post": {
+        "summary": "Push a Model",
+        "description": "Upload a model to a model library",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the model to push (required)"
+                  },
+                  "insecure": {
+                    "type": "boolean",
+                    "description": "Allow insecure connections to the library"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A stream of JSON objects with status \"success\"",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/embeddings": {
+      "post": {
+        "summary": "Generate Embeddings",
+        "description": "Generate embeddings from a model",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "model": {
+                    "type": "string",
+                    "description": "The model name (required)"
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "description": "Text to generate embeddings for"
+                  },
+                  "options": {
+                    "type": "object",
+                    "description": "Additional model parameters"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Embeddings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "embeddings": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
