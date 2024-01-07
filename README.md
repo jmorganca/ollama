@@ -276,6 +276,7 @@ See the [API documentation](./docs/api.md) for all endpoints.
 - [gptel Emacs client](https://github.com/karthink/gptel)
 - [Oatmeal](https://github.com/dustinblackman/oatmeal)
 - [cmdh](https://github.com/pgibler/cmdh)
+- [ShellOracle](https://github.com/djcopley/ShellOracle)
 
 ### Database
 
