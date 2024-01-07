@@ -154,8 +154,8 @@ func NumGPU(numLayer, fileSizeBytes int64, opts api.Options) int {
 	*/
 	bytesPerLayer := uint64(fileSizeBytes / numLayer)
 
-	// 75% of the absolute max number of layers we can fit in available VRAM, off-loading too many layers to the GPU can cause OOM errors
-	layers := int(info.FreeMemory/bytesPerLayer) * 3 / 4
+	// reduce the absolute max number of layers we can fit in available VRAM, off-loading too many layers to the GPU can cause OOM errors
+	layers := int(info.FreeMemory/bytesPerLayer) * 53 / 100
 
 	log.Printf("%d MB VRAM available, loading up to %d %s GPU layers out of %d", info.FreeMemory/(1024*1024), layers, info.Library, numLayer)
 
