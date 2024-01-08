@@ -272,14 +272,49 @@ func (llm *ggufModel) Decode(rso *readSeekOffset) error {
 	return nil
 }
 
-func (llm *ggufModel) NumLayers() int64 {
+func (llm *ggufModel) NumLayers() uint32 {
 	value, exists := llm.kv[fmt.Sprintf("%s.block_count", llm.ModelFamily())]
 	if !exists {
 		return 0
 	}
 
-	v := value.(uint32)
-	return int64(v)
+	return value.(uint32)
+}
+
+func (llm *ggufModel) NumHead() uint32 {
+	value, exists := llm.kv[fmt.Sprintf("%s.attention.head_count", llm.ModelFamily())]
+	if !exists {
+		return 0
+	}
+
+	return value.(uint32)
+}
+
+func (llm *ggufModel) NumEmbed() uint32 {
+	value, exists := llm.kv[fmt.Sprintf("%s.embedding_length", llm.ModelFamily())]
+	if !exists {
+		return 0
+	}
+
+	return value.(uint32)
+}
+
+func (llm *ggufModel) NumHeadKv() uint32 {
+	value, exists := llm.kv[fmt.Sprintf("%s.attention.head_count_kv", llm.ModelFamily())]
+	if !exists {
+		return 0
+	}
+
+	return value.(uint32)
+}
+
+func (llm *ggufModel) NumGQA() uint32 {
+	numHeadKv := llm.NumHeadKv()
+	if numHeadKv == 0 {
+		return 0
+	}
+
+	return llm.NumHead() / numHeadKv
 }
 
 func (llm ggufModel) readU8(r io.Reader) uint8 {

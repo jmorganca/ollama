@@ -35,14 +35,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 	"sync"
 	"time"
 	"unsafe"
 
 	"github.com/jmorganca/ollama/api"
-	"github.com/jmorganca/ollama/gpu"
 )
 
 type extServer interface {
@@ -82,25 +80,20 @@ func extServerResponseToErr(resp C.ext_server_resp_t) error {
 	return fmt.Errorf(C.GoString(resp.msg))
 }
 
-func newExtServer(server extServer, model string, adapters, projectors []string, numLayers int64, opts api.Options) (extServer, error) {
+func newExtServer(server extServer, model string, adapters, projectors []string, opts api.Options) (extServer, error) {
 	if !mutex.TryLock() {
 		log.Printf("concurrent llm servers not yet supported, waiting for prior server to complete")
 		mutex.Lock()
 	}
-	fileInfo, err := os.Stat(model)
-	if err != nil {
-		return nil, err
-	}
+
 	var sparams C.ext_server_params_t
 	sparams.model = C.CString(model)
 	defer C.free(unsafe.Pointer(sparams.model))
 
-	numGPU := gpu.NumGPU(numLayers, fileInfo.Size(), opts)
-
 	sparams.embedding = true
 	sparams.n_ctx = C.uint(opts.NumCtx)
 	sparams.n_batch = C.uint(opts.NumBatch)
-	sparams.n_gpu_layers = C.int(numGPU)
+	sparams.n_gpu_layers = C.int(opts.NumGPU)
 	sparams.main_gpu = C.int(opts.MainGPU)
 	sparams.n_parallel = 1 // TODO - wire up concurrency
 

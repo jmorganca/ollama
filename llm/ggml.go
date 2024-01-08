@@ -78,7 +78,11 @@ type model interface {
 	ModelFamily() string
 	ModelType() string
 	FileType() string
-	NumLayers() int64
+	NumLayers() uint32
+	NumGQA() uint32
+	NumEmbed() uint32
+	NumHead() uint32
+	NumHeadKv() uint32
 }
 
 type container interface {

@@ -54,9 +54,9 @@ func (llm *llamaExtServer) llama_server_release_json_resp(json_resp **C.char) {
 	C.llama_server_release_json_resp(json_resp)
 }
 
-func newDefaultExtServer(model string, adapters, projectors []string, numLayers int64, opts api.Options) (extServer, error) {
+func newDefaultExtServer(model string, adapters, projectors []string, opts api.Options) (extServer, error) {
 	server := &llamaExtServer{opts}
-	return newExtServer(server, model, adapters, projectors, numLayers, opts)
+	return newExtServer(server, model, adapters, projectors, opts)
 }
 
 func (llm *llamaExtServer) Predict(ctx context.Context, pred PredictOpts, fn func(PredictResult)) error {

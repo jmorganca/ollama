@@ -16,8 +16,6 @@ import (
 	"runtime"
 	"sync"
 	"unsafe"
-
-	"github.com/jmorganca/ollama/api"
 )
 
 type handles struct {
@@ -136,28 +134,4 @@ func CheckVRAM() (int64, error) {
 		return int64(gpuInfo.FreeMemory), nil
 	}
 	return 0, fmt.Errorf("no GPU detected") // TODO - better handling of CPU based memory determiniation
-}
-
-func NumGPU(numLayer, fileSizeBytes int64, opts api.Options) int {
-	if opts.NumGPU != -1 {
-		return opts.NumGPU
-	}
-	info := GetGPUInfo()
-	if info.Library == "cpu" || info.Library == "default" {
-		return 0
-	}
-
-	/*
-		Calculate bytes per layer, this will roughly be the size of the model file divided by the number of layers.
-		We can store the model weights and the kv cache in vram,
-		to enable kv chache vram storage add two additional layers to the number of layers retrieved from the model file.
-	*/
-	bytesPerLayer := uint64(fileSizeBytes / numLayer)
-
-	// 75% of the absolute max number of layers we can fit in available VRAM, off-loading too many layers to the GPU can cause OOM errors
-	layers := int(info.FreeMemory/bytesPerLayer) * 3 / 4
-
-	log.Printf("%d MB VRAM available, loading up to %d %s GPU layers out of %d", info.FreeMemory/(1024*1024), layers, info.Library, numLayer)
-
-	return layers
 }

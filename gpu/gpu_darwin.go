@@ -6,18 +6,30 @@ import "C"
 import (
 	"runtime"
 
-	"github.com/jmorganca/ollama/api"
+	"github.com/pbnjay/memory"
 )
 
 // CheckVRAM returns the free VRAM in bytes on Linux machines with NVIDIA GPUs
 func CheckVRAM() (int64, error) {
-	// TODO - assume metal, and return free memory?
-	return 0, nil
+	if runtime.GOARCH == "amd64" {
+		return 0, nil
+	}
 
+	// on macOS, there's already buffer for available vram (see below) so just return the total
+	systemMemory := int64(memory.TotalMemory())
+
+	// macOS limits how much memory is available to the GPU based on the amount of system memory
+	// TODO: handle case where iogpu.wired_limit_mb is set to a higher value
+	if systemMemory <= 36*1024*1024*1024 {
+		systemMemory = systemMemory * 2 / 3
+	} else {
+		systemMemory = systemMemory * 3 / 4
+	}
+
+	return systemMemory, nil
 }
 
 func GetGPUInfo() GpuInfo {
-	// TODO - Metal vs. x86 macs...
 	mem, _ := getCPUMem()
 	return GpuInfo{
 		Library: "default",
@@ -30,19 +42,6 @@ func getCPUMem() (memInfo, error) {
 		TotalMemory: 0,
 		FreeMemory:  0,
 	}, nil
-}
-
-func NumGPU(numLayer, fileSizeBytes int64, opts api.Options) int {
-	if opts.NumGPU != -1 {
-		return opts.NumGPU
-	}
-
-	// metal only supported on arm64
-	if runtime.GOARCH == "arm64" {
-		return 1
-	}
-
-	return 0
 }
 
 func nativeInit() error {

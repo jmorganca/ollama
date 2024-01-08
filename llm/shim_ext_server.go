@@ -72,7 +72,7 @@ func (llm *shimExtServer) llama_server_release_json_resp(json_resp **C.char) {
 	C.dynamic_shim_llama_server_release_json_resp(llm.s, json_resp)
 }
 
-func newDynamicShimExtServer(library, model string, adapters, projectors []string, numLayers int64, opts api.Options) (extServer, error) {
+func newDynamicShimExtServer(library, model string, adapters, projectors []string, opts api.Options) (extServer, error) {
 	shimMutex.Lock()
 	defer shimMutex.Unlock()
 	updatePath(filepath.Dir(library))
@@ -90,7 +90,7 @@ func newDynamicShimExtServer(library, model string, adapters, projectors []strin
 		options: opts,
 	}
 	log.Printf("Loading Dynamic Shim llm server: %s", library)
-	return newExtServer(llm, model, adapters, projectors, numLayers, opts)
+	return newExtServer(llm, model, adapters, projectors, opts)
 }
 
 func (llm *shimExtServer) Predict(ctx context.Context, pred PredictOpts, fn func(PredictResult)) error {

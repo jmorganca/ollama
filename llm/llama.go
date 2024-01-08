@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"sync"
 	"time"
 
 	"github.com/jmorganca/ollama/api"
@@ -43,69 +42,11 @@ number ::= ("-"? ([0-9] | [1-9] [0-9]*)) ("." [0-9]+)? ([eE] [-+]? [0-9]+)? ws
 ws ::= ([ \t\n] ws)?
 `
 
-type llamaModel struct {
-	hyperparameters llamaHyperparameters
-}
-
-func (llm *llamaModel) ModelFamily() string {
-	return "llama"
-}
-
-func llamaModelType(numLayer uint32) string {
-	switch numLayer {
-	case 26:
-		return "3B"
-	case 32:
-		return "7B"
-	case 40:
-		return "13B"
-	case 48:
-		return "34B"
-	case 60:
-		return "30B"
-	case 80:
-		return "65B"
-	default:
-		return "unknown"
-	}
-}
-
-func (llm *llamaModel) ModelType() string {
-	return llamaModelType(llm.hyperparameters.NumLayer)
-}
-
-func (llm *llamaModel) FileType() string {
-	return fileType(llm.hyperparameters.FileType)
-}
-
-func (llm *llamaModel) NumLayers() int64 {
-	return int64(llm.hyperparameters.NumLayer)
-}
-
-type llamaHyperparameters struct {
-	// NumVocab is the size of the model's vocabulary.
-	NumVocab uint32
-
-	// NumEmbd is the size of the model's embedding layer.
-	NumEmbd uint32
-	NumMult uint32
-	NumHead uint32
-
-	// NumLayer is the number of layers in the model.
-	NumLayer uint32
-	NumRot   uint32
-
-	// FileType describes the quantization level of the model, e.g. Q4_0, Q5_K, etc.
-	FileType uint32
-}
-
 type Running struct {
 	Port          int
 	Cmd           *exec.Cmd
 	Cancel        context.CancelFunc
-	exitOnce      sync.Once
-	exitCh        chan error // channel to receive the exit status of the subprocess
-	*StatusWriter            // captures error messages from the llama runner process
+	*StatusWriter // captures error messages from the llama runner process
 }
 
 type ImageData struct {
