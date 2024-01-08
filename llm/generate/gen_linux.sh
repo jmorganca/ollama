@@ -60,12 +60,24 @@ install
 # Placeholder to keep go embed happy until we start building dynamic CPU lib variants
 touch ${BUILD_DIR}/lib/dummy.so
 
-if [ -d /usr/local/cuda/lib64/ ]; then
+if [ -d /usr/local/cuda/lib64/ ] || [ -n ${NIX_CUDA_OUT_DIR} ] || [ -n ${NIX_CUDA_LIB_DIR} ]; then
     echo "CUDA libraries detected - building dynamic CUDA library"
     init_vars
     CMAKE_DEFS="-DLLAMA_CUBLAS=on ${COMMON_CMAKE_DEFS} ${CMAKE_DEFS}"
     BUILD_DIR="${LLAMACPP_DIR}/build/linux/cuda"
-    CUDA_LIB_DIR=/usr/local/cuda/lib64
+    
+    if [ -n ${NIX_CUDA_OUT_DIR} ]; then
+        CUDA_LIB_DIR=${NIX_CUDA_OUT_DIR}/lib
+    else
+        CUDA_LIB_DIR=/usr/local/cuda/lib64
+    fi
+    
+    if [ -n ${NIX_CUDA_LIB_DIR} ]; then
+        CUDART_LIB_DIR=${NIX_CUDA_LIB_DIR}/lib
+    else
+        CUDART_LIB_DIR=/usr/local/cuda/lib64
+    fi
+    
     build
     install
     gcc -fPIC -g -shared -o ${BUILD_DIR}/lib/libext_server.so \
@@ -74,7 +86,7 @@ if [ -d /usr/local/cuda/lib64/ ]; then
         ${BUILD_DIR}/lib/libcommon.a \
         ${BUILD_DIR}/lib/libllama.a \
         -Wl,--no-whole-archive \
-        ${CUDA_LIB_DIR}/libcudart_static.a \
+        ${CUDART_LIB_DIR}/libcudart_static.a \
         ${CUDA_LIB_DIR}/libcublas_static.a \
         ${CUDA_LIB_DIR}/libcublasLt_static.a \
         ${CUDA_LIB_DIR}/libcudadevrt.a \
