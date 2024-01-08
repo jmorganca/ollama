@@ -39,6 +39,8 @@ To run and chat with [Llama 2](https://ollama.ai/library/llama2):
 ollama run llama2
 ```
 
+Also check [ollama-quickstart-docker](./docs/tutorials/ollama-quickstart-docker.md).
+
 ## Model library
 
 Ollama supports a list of open-source models available on [ollama.ai/library](https://ollama.ai/library 'ollama model library')
