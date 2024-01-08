@@ -276,6 +276,7 @@ See the [API documentation](./docs/api.md) for all endpoints.
 - [gptel Emacs client](https://github.com/karthink/gptel)
 - [Oatmeal](https://github.com/dustinblackman/oatmeal)
 - [cmdh](https://github.com/pgibler/cmdh)
+- [Nano Bots CLI](https://github.com/icebaker/ruby-nano-bots)
 
 ### Database
 
@@ -293,6 +294,7 @@ See the [API documentation](./docs/api.md) for all endpoints.
 - [LiteLLM](https://github.com/BerriAI/litellm)
 - [OllamaSharp for .NET](https://github.com/awaescher/OllamaSharp)
 - [Ollama for Ruby](https://github.com/gbaptista/ollama-ai)
+- [Nano Bots for Ruby](https://github.com/icebaker/ruby-nano-bots)
 - [Ollama-rs for Rust](https://github.com/pepperoni21/ollama-rs)
 - [Ollama4j for Java](https://github.com/amithkoujalgi/ollama4j)
 - [ModelFusion Typescript Library](https://modelfusion.dev/integration/model-provider/ollama)
@@ -320,3 +322,6 @@ See the [API documentation](./docs/api.md) for all endpoints.
 - [Rivet plugin](https://github.com/abrenneke/rivet-plugin-ollama)
 - [Llama Coder](https://github.com/ex3ndr/llama-coder) (Copilot alternative using Ollama)
 - [Obsidian BMO Chatbot plugin](https://github.com/longy2k/obsidian-bmo-chatbot)
+- [Obsidian Nano Bots plugin](https://github.com/icebaker/obsidian-nano-bots)
+- [Visual Studio Code (VSCode)](https://github.com/icebaker/vscode-nano-bots)
+- [Sublime Text](https://github.com/icebaker/sublime-nano-bots)
